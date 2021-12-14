@@ -1,5 +1,7 @@
 package simulator.simulation;
 
+import java.util.Random;
+
 public enum MapDirection {
     NORTH,
     NORTH_EAST,
@@ -60,7 +62,7 @@ public enum MapDirection {
             case R_225 -> this.prev().prev().prev();
             case R_270 -> this.prev().prev();
             case R_315 -> this.prev();
-        }
+        };
 
     }
 
@@ -75,5 +77,10 @@ public enum MapDirection {
             case WEST -> new Vector2d(-1, 0);
             case NORTH_WEST -> new Vector2d(-1, 1);
         };
+    }
+
+    public static MapDirection getRandomDirection() {
+        Random random = new Random();
+        return values()[random.nextInt(values().length)];
     }
 }

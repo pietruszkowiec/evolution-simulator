@@ -12,14 +12,16 @@ public enum Gene {
     G_6,
     G_7;
 
-    public static List<Gene> generateRandomGenome(int length) {
+    public static List<Gene> generateRandomGenome() {
         Random random = new Random();
         List<Gene> genomeList = new ArrayList<>();
+
         Gene chosenGene;
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < Animal.genomeLength; i++) {
             chosenGene = values()[random.nextInt(values().length)];
             genomeList.add(chosenGene);
         }
+
         Collections.sort(genomeList);
         return genomeList;
     }
