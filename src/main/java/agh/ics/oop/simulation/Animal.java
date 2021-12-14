@@ -1,4 +1,4 @@
-package simulator.simulation;
+package agh.ics.oop.simulation;
 
 import java.util.List;
 import java.util.Random;
@@ -24,6 +24,14 @@ public class Animal {
         this.position = initialPosition;
         this.energy = startEnergy;
         this.genome = Gene.generateRandomGenome();
+    }
+
+    public Vector2d getPosition() {
+        return position;
+    }
+
+    public int getEnergy() {
+        return energy;
     }
 
     public void move() {

@@ -1,4 +1,4 @@
-package simulator.simulation;
+package agh.ics.oop.simulation;
 
 public enum MapBehaviour {
     FORWARD,

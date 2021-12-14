@@ -1,4 +1,4 @@
-package simulator.simulation;
+package agh.ics.oop.simulation;
 
 import java.util.*;
 

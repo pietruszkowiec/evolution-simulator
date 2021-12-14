@@ -1,4 +1,4 @@
-package simulator.application;
+package agh.ics.oop.application;
 
 
 public class Main {

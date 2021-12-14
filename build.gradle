@@ -20,5 +20,5 @@ test {
 }
 
 application {
-    mainClassName = 'simulator.application.Main'
+    mainClassName = 'agh.ics.oop.application.Main'
 }
