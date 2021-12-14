@@ -3,20 +3,20 @@ package simulator.simulation;
 import java.util.*;
 
 public enum Gene {
-    G0,
-    G1,
-    G2,
-    G3,
-    G4,
-    G5,
-    G6,
-    G7;
+    G_0,
+    G_1,
+    G_2,
+    G_3,
+    G_4,
+    G_5,
+    G_6,
+    G_7;
 
     public static List<Gene> generateRandomGenome(int length) {
         Random random = new Random();
         List<Gene> genomeList = new ArrayList<>();
         Gene chosenGene;
-        for(int i = 0; i < length; i++) {
+        for (int i = 0; i < length; i++) {
             chosenGene = values()[random.nextInt(values().length)];
             genomeList.add(chosenGene);
         }
@@ -30,16 +30,16 @@ public enum Gene {
         return genome.get(randomIndex);
     }
 
-    public static Rotation geneToRotation(Gene gene) {
-        return switch(gene) {
-            case G0 -> Rotation.D0;
-            case G1 -> Rotation.D45;
-            case G2 -> Rotation.D90;
-            case G3 -> Rotation.D135;
-            case G4 -> Rotation.D180;
-            case G5 -> Rotation.D225;
-            case G6 -> Rotation.D270;
-            case G7 -> Rotation.D315;
+    public MapBehaviour geneToMapBehaviour() {
+        return switch (this) {
+            case G_0 -> MapBehaviour.FORWARD;
+            case G_1 -> MapBehaviour.R_45;
+            case G_2 -> MapBehaviour.R_90;
+            case G_3 -> MapBehaviour.R_135;
+            case G_4 -> MapBehaviour.BACKWARD;
+            case G_5 -> MapBehaviour.R_225;
+            case G_6 -> MapBehaviour.R_270;
+            case G_7 -> MapBehaviour.R_315;
         };
     }
 
