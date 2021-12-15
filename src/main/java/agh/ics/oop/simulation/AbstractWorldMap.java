@@ -1,16 +1,13 @@
 package agh.ics.oop.simulation;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import agh.ics.oop.application.MapVisualizer;
+
+import java.util.*;
 
 public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final int width, height;
-    protected final Vector2d lowerLeftBound;
-    protected final Vector2d upperRightBound;
-    protected final int moveEnergy;
-    protected final int plantEnergy;
+    protected final Vector2d lowerLeft;
+    protected final Vector2d upperRight;
     protected final float jungleRatio;
     protected final int jungleWidth, jungleHeight;
     protected final Vector2d jungleLowerLeft;
@@ -18,26 +15,31 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final Random random;
     protected HashMap<Vector2d, AnimalSet> animalSets;
     protected HashMap<Vector2d, Grass> grassMap;
+    protected MapVisualizer mapVisualizer;
 
-    public AbstractWorldMap(int width, int height, int moveEnergy,
-                            int plantEnergy, float jungleRatio) {
+    public AbstractWorldMap(int width, int height, float jungleRatio) {
         this.width = width;
         this.height = height;
-        this.lowerLeftBound = new Vector2d(0, 0);
-        this.upperRightBound = new Vector2d(width-1, height-1);
-        this.moveEnergy = moveEnergy;
-        this.plantEnergy = plantEnergy;
+        this.lowerLeft = new Vector2d(0, 0);
+        this.upperRight = new Vector2d(width-1, height-1);
         this.jungleRatio = jungleRatio;
 
         this.jungleWidth = (int) (width * jungleRatio);
         this.jungleHeight = (int) (height * jungleRatio);
         int jungleLowerLeftX = (this.width - this.jungleWidth) / 2;
         int jungleLowerLeftY = (this.height - this.jungleHeight) / 2;
+        System.out.println(jungleLowerLeftX + " " + jungleLowerLeftY);
+        System.out.println((jungleLowerLeftX+this.jungleWidth) + " "
+                + (jungleLowerLeftY+this.jungleHeight));
         this.jungleLowerLeft = new Vector2d(jungleLowerLeftX, jungleLowerLeftY);
         this.jungleUpperRight = new Vector2d(jungleLowerLeftX+this.jungleWidth,
                 jungleLowerLeftY+this.jungleHeight);
 
         this.random = new Random();
+        this.mapVisualizer = new MapVisualizer(this);
+
+        this.animalSets = new LinkedHashMap<>(0);
+        this.grassMap = new LinkedHashMap<>(0);
     }
 
     public void placeAnimal(Animal animal) {
@@ -51,22 +53,27 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
             animalSet.add(animal);
             this.animalSets.put(position, animalSet);
         }
-        animal.addObserver(this);
     }
 
-    public boolean placeGrass(Grass grass) {
+    public void placeGrass(Grass grass) {
         Vector2d position = grass.getPosition();
         if (!(isOccupiedByAnimal(position)) && !(isOccupiedByGrass(position))) {
             this.grassMap.put(position, grass);
-            return true;
         }
-        return false;
+    }
+
+    public Object objectAt(Vector2d position) {
+        Animal animal = animalAt(position);
+        if (animal != null) {
+            return animal;
+        }
+        return grassAt(position);
     }
 
     public Animal animalAt(Vector2d position) {
         if (isOccupiedByAnimal(position)) {
             AnimalSet animalSet = animalSets.get(position);
-            return animalSet.last();
+            return animalSet.first();
         }
         return null;
     }
@@ -79,7 +86,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     }
 
     public boolean isOccupied(Vector2d position) {
-        return isOccupiedByAnimal(position) || isOccupiedByAnimal(position);
+        return isOccupiedByAnimal(position) || isOccupiedByGrass(position);
     }
 
     public boolean isOccupiedByAnimal(Vector2d position) {
@@ -156,7 +163,26 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         return position;
     }
 
-    public void feedAnimals() {
+    public List<Animal> removeDeadAnimals() {
+        List<AnimalSet> animalSetsList = new LinkedList<>(this.animalSets.values());
+        List<Animal> deadAnimals = new LinkedList<>();
+        Animal deadAnimal;
+
+        for (AnimalSet animalSet : animalSetsList) {
+            while (!(animalSet.isEmpty()) && animalSet.last().isDead()) {
+                deadAnimal = animalSet.last();
+                deadAnimals.add(deadAnimal);
+                animalSet.remove(deadAnimal);
+            }
+            if (animalSet.isEmpty()) {
+                this.animalSets.remove(animalSet);
+            }
+        }
+
+        return deadAnimals;
+    }
+
+    public void feedAnimals(int plantEnergy) {
         List<Animal> strongestAnimals;
         AnimalSet animalSet;
 
@@ -164,7 +190,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
             if (isOccupiedByGrass(position)) {
                 animalSet = this.animalSets.get(position);
                 strongestAnimals = animalSet.firstWithTies();
-                int energyForEach = this.plantEnergy / strongestAnimals.size();
+                int energyForEach = plantEnergy / strongestAnimals.size();
                 for (Animal animal : strongestAnimals) {
                     animal.increaseEnergy(energyForEach);
                     animalSet.remove(animal);
@@ -187,10 +213,12 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
             if (firstTwoAnimals.size() == 2) {
                 firstParent = firstTwoAnimals.get(0);
                 secondParent = firstTwoAnimals.get(1);
-                child = firstParent.reproduce(secondParent);
-                children.add(child);
-                animalSet.add(child);
-                child.addObserver(this);
+                if (firstParent.canReproduce() && secondParent.canReproduce()) {
+                    child = firstParent.reproduce(secondParent);
+                    children.add(child);
+                    animalSet.add(child);
+                    child.addObserver(this);
+                }
             }
         }
 
@@ -215,12 +243,15 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         placeAnimal(animal);
     }
 
-    public void animalDied(Animal animal) {
+    public void energyChanged(Animal animal) {
         Vector2d position = animal.getPosition();
         AnimalSet animalSet = this.animalSets.get(position);
         animalSet.remove(animal);
-        if (animalSet.isEmpty()) {
-            this.animalSets.remove(position);
-        }
+        animalSet.add(animal);
+    }
+
+    @Override
+    public String toString() {
+        return this.mapVisualizer.draw(this.lowerLeft, this.upperRight);
     }
 }

@@ -28,7 +28,7 @@ public enum Gene {
 
     public static Gene getRandomGeneFromGenome(List<Gene> genome) {
         Random random = new Random();
-        int randomIndex = random.nextInt(genome.size());
+        int randomIndex = random.nextInt(Animal.genomeLength);
         return genome.get(randomIndex);
     }
 
@@ -45,5 +45,18 @@ public enum Gene {
         };
     }
 
+    @Override
+    public String toString() {
+        return switch (this) {
+            case G_0 -> "0";
+            case G_1 -> "1";
+            case G_2 -> "2";
+            case G_3 -> "3";
+            case G_4 -> "4";
+            case G_5 -> "5";
+            case G_6 -> "6";
+            case G_7 -> "7";
+        };
+    }
 
 }

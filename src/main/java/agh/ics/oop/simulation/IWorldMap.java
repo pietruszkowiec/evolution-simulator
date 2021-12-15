@@ -1,10 +1,11 @@
 package agh.ics.oop.simulation;
 
 public interface IWorldMap {
-
     void placeAnimal(Animal animal);
 
-    boolean placeGrass(Grass grass);
+    void placeGrass(Grass grass);
+
+    Object objectAt(Vector2d position);
 
     Animal animalAt(Vector2d position);
 

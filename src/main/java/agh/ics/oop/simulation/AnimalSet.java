@@ -22,15 +22,26 @@ public class AnimalSet {
     }
 
     public Animal first() {
+        if (this.animals.isEmpty()) {
+            return null;
+        }
         return this.animals.first();
     }
 
     public Animal last() {
+        if (this.animals.isEmpty()) {
+            return null;
+        }
         return this.animals.last();
     }
 
     public List<Animal> firstWithTies() {
         List<Animal> strongestAnimals = new LinkedList<>();
+
+        if (this.animals.isEmpty()) {
+            return strongestAnimals;
+        }
+
         Animal firstAnimal = this.animals.first();
 
         for (Animal animal : this.animals) {
@@ -58,7 +69,7 @@ public class AnimalSet {
     }
 
     public boolean isEmpty() {
-        return this.isEmpty();
+        return this.animals.isEmpty();
     }
 
     public int size() {

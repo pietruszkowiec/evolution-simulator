@@ -10,4 +10,9 @@ public class Grass {
     public Vector2d getPosition() {
         return position;
     }
+
+    @Override
+    public String toString() {
+        return " *  ";
+    }
 }

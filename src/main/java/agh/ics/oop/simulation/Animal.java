@@ -1,15 +1,13 @@
 package agh.ics.oop.simulation;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class Animal {
     private Vector2d position;
-    private final int startEnergy;
     private int energy;
+    private final int startEnergy;
     private MapDirection direction = MapDirection.getRandomDirection();
-    private final List<Gene> genome;
+    public final List<Gene> genome;
     public static final int genomeLength = 32;
     private final AbstractWorldMap map;
     private final List<IAnimalObserver> observers;
@@ -44,7 +42,7 @@ public class Animal {
         return energy;
     }
 
-    public void move() {
+    public void move(int moveEnergy) {
         Gene gene = Gene.getRandomGeneFromGenome(genome);
         MapBehaviour behaviour = gene.geneToMapBehaviour();
         Vector2d oldPosition = this.position;
@@ -60,8 +58,7 @@ public class Animal {
         }
 
         positionChanged(oldPosition);
-        decreaseEnergy(this.map.moveEnergy);
-
+        decreaseEnergy(moveEnergy);
     }
 
     public void increaseEnergy(int energyGained) {
@@ -70,11 +67,18 @@ public class Animal {
 
     public void decreaseEnergy(int energyLost) {
         this.energy -= energyLost;
-        if (this.energy <= 0) {
-            for (IAnimalObserver observer : observers) {
-                observer.animalDied(this);
-            }
+        if (this.energy < 0) {
+            this.energy = 0;
         }
+        energyChanged();
+    }
+
+    public boolean isDead() {
+        return this.energy == 0;
+    }
+
+    public boolean canReproduce() {
+        return this.energy >= (this.startEnergy / 2);
     }
 
     public Animal reproduce(Animal other) {
@@ -100,8 +104,9 @@ public class Animal {
             rightPartGenome = this.genome.subList(otherParentGenomeShare, Animal.genomeLength);
         }
 
-        List<Gene> childGenome = leftPartGenome;
+        List<Gene> childGenome = new ArrayList<>(leftPartGenome);
         childGenome.addAll(rightPartGenome);
+        Collections.sort(childGenome);
 
         this.decreaseEnergy(thisParentEnergyLoss);
         other.decreaseEnergy(otherParentEnergyLoss);
@@ -118,5 +123,20 @@ public class Animal {
         for (IAnimalObserver observer : this.observers) {
             observer.positionChanged(oldPosition, this);
         }
+    }
+
+    public void energyChanged() {
+        for (IAnimalObserver observer : this.observers) {
+            observer.energyChanged(this);
+        }
+    }
+
+    public String toString() {
+        String res = this.energy + "";
+        if (this.energy < 10) {
+            res += " ";
+        }
+        res += this.direction;
+        return res;
     }
 }
