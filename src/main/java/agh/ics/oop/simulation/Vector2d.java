@@ -60,10 +60,7 @@ public class Vector2d {
         if(!(other instanceof Vector2d))
             return false;
         Vector2d that = (Vector2d) other;
-        if (this.x != that.x || this.y != that.y) {
-            return false;
-        }
-        return true;
+        return this.x == that.x && this.y == that.y;
     }
 
     public Vector2d opposite() {

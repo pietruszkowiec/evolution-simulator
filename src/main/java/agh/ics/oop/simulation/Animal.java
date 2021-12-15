@@ -10,20 +10,26 @@ public class Animal {
     private MapDirection direction = MapDirection.getRandomDirection();
     private final List<Gene> genome;
     public final static int genomeLength = 32;
+    private final AbstractWorldMap map;
 
     public Animal(Vector2d initialPosition,
-                  int startEnergy,
-                  int initialEnergy, List<Gene> genome) {
+                  int startEnergy, int initialEnergy,
+                  List<Gene> genome, AbstractWorldMap map) {
         this.position = initialPosition;
         this.startEnergy = startEnergy;
         this.energy = initialEnergy;
         this.genome = genome;
+        this.map = map;
     }
 
-    public Animal(Vector2d initialPosition, int startEnergy) {
+    public Animal(Vector2d initialPosition,
+                  int startEnergy, int initialEnergy,
+                  AbstractWorldMap map) {
         this.position = initialPosition;
-        this.energy = startEnergy;
+        this.startEnergy = startEnergy;
+        this.energy = initialEnergy;
         this.genome = Gene.generateRandomGenome();
+        this.map = map;
     }
 
     public Vector2d getPosition() {
@@ -42,13 +48,13 @@ public class Animal {
 
         if (behaviour == MapBehaviour.FORWARD) {
             Vector2d nextPosition = this.position.add(this.direction.toUnitVector());
-//            nextPosition = this.map.transformPosition(this.position, nextPosition);
-            this.position = nextPosition;
+            this.position = this.map.transformPosition(this.position, nextPosition);
         } else if (behaviour == MapBehaviour.BACKWARD) {
             Vector2d nextPosition = this.position.subtract(this.direction.toUnitVector());
-//           nextPosition = this.map.transformPosition(this.position, nextPosition);
-            this.position = nextPosition;
+            this.position = this.map.transformPosition(this.position, nextPosition);
         }
+
+        decreaseEnergy(this.map.moveEnergy);
     }
 
     public void increaseEnergy(int energyGained) {
@@ -88,6 +94,7 @@ public class Animal {
         this.decreaseEnergy(thisParentEnergyLoss);
         other.decreaseEnergy(otherParentEnergyLoss);
 
-        return new Animal(this.position, this.startEnergy, childEnergy, childGenome);
+        return new Animal(this.position, this.startEnergy,
+                childEnergy, childGenome, this.map);
     }
 }
