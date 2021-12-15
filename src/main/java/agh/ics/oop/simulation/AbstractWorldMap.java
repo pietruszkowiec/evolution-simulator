@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-public abstract class AbstractWorldMap implements IWorldMap {
+public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final int width, height;
     protected final Vector2d lowerLeftBound;
     protected final Vector2d upperRightBound;
@@ -51,6 +51,7 @@ public abstract class AbstractWorldMap implements IWorldMap {
             animalSet.add(animal);
             this.animalSets.put(position, animalSet);
         }
+        animal.addObserver(this);
     }
 
     public boolean placeGrass(Grass grass) {
@@ -155,25 +156,6 @@ public abstract class AbstractWorldMap implements IWorldMap {
         return position;
     }
 
-    public List<Animal> removeDeadAnimals() {
-        List<AnimalSet> animalSetsList = new LinkedList<>(this.animalSets.values());
-        List<Animal> deadAnimals = new LinkedList<>();
-        Animal deadAnimal;
-
-        for (AnimalSet animalSet : animalSetsList) {
-            while (!(animalSet.isEmpty()) && animalSet.last().getEnergy() == 0) {
-                deadAnimal = animalSet.last();
-                deadAnimals.add(deadAnimal);
-                animalSet.remove(deadAnimal);
-            }
-            if (!(animalSet.isEmpty())) {
-                this.animalSets.remove(animalSet);
-            }
-        }
-
-        return deadAnimals;
-    }
-
     public void feedAnimals() {
         List<Animal> strongestAnimals;
         AnimalSet animalSet;
@@ -185,6 +167,8 @@ public abstract class AbstractWorldMap implements IWorldMap {
                 int energyForEach = this.plantEnergy / strongestAnimals.size();
                 for (Animal animal : strongestAnimals) {
                     animal.increaseEnergy(energyForEach);
+                    animalSet.remove(animal);
+                    animalSet.add(animal);
                 }
                 this.grassMap.remove(position);
             }
@@ -206,6 +190,7 @@ public abstract class AbstractWorldMap implements IWorldMap {
                 child = firstParent.reproduce(secondParent);
                 children.add(child);
                 animalSet.add(child);
+                child.addObserver(this);
             }
         }
 
@@ -221,6 +206,21 @@ public abstract class AbstractWorldMap implements IWorldMap {
         }
         if (outsideJunglePosition != null) {
             placeGrass(new Grass(outsideJunglePosition));
+        }
+    }
+
+    public void positionChanged(Vector2d oldPosition, Animal animal) {
+        AnimalSet animalSet = this.animalSets.get(oldPosition);
+        animalSet.remove(animal);
+        placeAnimal(animal);
+    }
+
+    public void animalDied(Animal animal) {
+        Vector2d position = animal.getPosition();
+        AnimalSet animalSet = this.animalSets.get(position);
+        animalSet.remove(animal);
+        if (animalSet.isEmpty()) {
+            this.animalSets.remove(position);
         }
     }
 }

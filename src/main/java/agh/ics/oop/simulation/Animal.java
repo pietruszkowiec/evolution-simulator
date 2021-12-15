@@ -1,5 +1,6 @@
 package agh.ics.oop.simulation;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
@@ -11,6 +12,7 @@ public class Animal {
     private final List<Gene> genome;
     public static final int genomeLength = 32;
     private final AbstractWorldMap map;
+    private final List<IAnimalObserver> observers;
 
     public Animal(Vector2d initialPosition,
                   int startEnergy, int initialEnergy,
@@ -20,6 +22,7 @@ public class Animal {
         this.energy = initialEnergy;
         this.genome = genome;
         this.map = map;
+        this.observers = new LinkedList<>();
     }
 
     public Animal(Vector2d initialPosition,
@@ -30,6 +33,7 @@ public class Animal {
         this.energy = initialEnergy;
         this.genome = Gene.generateRandomGenome();
         this.map = map;
+        this.observers = new LinkedList<>();
     }
 
     public Vector2d getPosition() {
@@ -43,6 +47,7 @@ public class Animal {
     public void move() {
         Gene gene = Gene.getRandomGeneFromGenome(genome);
         MapBehaviour behaviour = gene.geneToMapBehaviour();
+        Vector2d oldPosition = this.position;
 
         this.direction = this.direction.changeDirectionWithMapBehaviour(behaviour);
 
@@ -54,7 +59,9 @@ public class Animal {
             this.position = this.map.transformPosition(this.position, nextPosition);
         }
 
+        positionChanged(oldPosition);
         decreaseEnergy(this.map.moveEnergy);
+
     }
 
     public void increaseEnergy(int energyGained) {
@@ -63,6 +70,11 @@ public class Animal {
 
     public void decreaseEnergy(int energyLost) {
         this.energy -= energyLost;
+        if (this.energy <= 0) {
+            for (IAnimalObserver observer : observers) {
+                observer.animalDied(this);
+            }
+        }
     }
 
     public Animal reproduce(Animal other) {
@@ -96,5 +108,15 @@ public class Animal {
 
         return new Animal(this.position, this.startEnergy,
                 childEnergy, childGenome, this.map);
+    }
+
+    public void addObserver(IAnimalObserver observer) {
+        this.observers.add(observer);
+    }
+
+    public void positionChanged(Vector2d oldPosition) {
+        for (IAnimalObserver observer : this.observers) {
+            observer.positionChanged(oldPosition, this);
+        }
     }
 }

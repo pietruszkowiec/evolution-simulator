@@ -1,9 +1,9 @@
 package agh.ics.oop.simulation;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
-public class SimulationEngine {
+public class SimulationEngine implements IAnimalObserver {
     protected final AbstractWorldMap map;
     protected final int initialNumOfAnimals;
     protected final int initialNumOfGrass;
@@ -16,8 +16,8 @@ public class SimulationEngine {
         this.initialNumOfAnimals = initialNumOfAnimals;
         this.initialNumOfGrass = initialNumOfGrass;
         this.startEnergy = startEnergy;
-        this.animals = new ArrayList<>(0);
-
+        this.animals = new LinkedList<>();
+        createAnimals();
     }
 
     public void createAnimals() {
@@ -35,20 +35,19 @@ public class SimulationEngine {
                     this.startEnergy, this.map);
             this.map.placeAnimal(animal);
             animals.add(animal);
+            animal.addObserver(this);
         }
     }
 
     public void addAnimals(List<Animal> children) {
         this.animals.addAll(children);
-    }
-
-    public void deleteAnimals(List<Animal> deadAnimals) {
-        this.animals.removeAll(deadAnimals);
+        for (Animal child : children) {
+            child.addObserver(this);
+        }
     }
 
     public void run() {
         while (true) {
-            deleteAnimals(this.map.removeDeadAnimals());
             for (Animal animal : animals) {
                 animal.move();
             }
@@ -58,4 +57,13 @@ public class SimulationEngine {
         }
     }
 
+    @Override
+    public void positionChanged(Vector2d oldPosition, Animal animal) {
+        return;
+    }
+
+    @Override
+    public void animalDied(Animal animal) {
+        this.animals.remove(animal);
+    }
 }
