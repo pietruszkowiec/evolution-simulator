@@ -5,11 +5,11 @@ import java.util.Random;
 
 public class Animal {
     private Vector2d position;
-    private int startEnergy;
+    private final int startEnergy;
     private int energy;
     private MapDirection direction = MapDirection.getRandomDirection();
     private final List<Gene> genome;
-    public final static int genomeLength = 32;
+    public static final int genomeLength = 32;
     private final AbstractWorldMap map;
 
     public Animal(Vector2d initialPosition,

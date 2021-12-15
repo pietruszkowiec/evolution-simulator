@@ -32,40 +32,45 @@ public class Vector2d {
     public Vector2d upperRight(Vector2d other) {
         int newX = Math.max(this.x, other.x);
         int newY = Math.max(this.y, other.y);
+
         return new Vector2d(newX, newY);
     }
 
     public Vector2d lowerLeft(Vector2d other) {
         int newX = Math.min(this.x, other.x);
         int newY = Math.min(this.y, other.y);
+
         return new Vector2d(newX, newY);
     }
 
     public Vector2d add(Vector2d other) {
         int newX = this.x + other.x;
         int newY = this.y + other.y;
+
         return new Vector2d(newX, newY);
     }
 
     public Vector2d subtract(Vector2d other) {
         int newX = this.x - other.x;
         int newY = this.y - other.y;
+
         return new Vector2d(newX, newY);
     }
 
     @Override
     public boolean equals(Object other) {
-        if (this == other)
+        if (this == other) {
             return true;
-        if(!(other instanceof Vector2d))
+        }
+        if(!(other instanceof Vector2d)) {
             return false;
+        }
         Vector2d that = (Vector2d) other;
+
         return this.x == that.x && this.y == that.y;
     }
 
     public Vector2d opposite() {
-        int newX = this.y;
-        int newY = this.x;
-        return new Vector2d(newX, newY);
+        return new Vector2d(this.y, this.x);
     }
 }

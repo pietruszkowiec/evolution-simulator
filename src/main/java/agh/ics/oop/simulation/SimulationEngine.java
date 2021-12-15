@@ -16,7 +16,6 @@ public class SimulationEngine {
         this.initialNumOfAnimals = initialNumOfAnimals;
         this.initialNumOfGrass = initialNumOfGrass;
         this.startEnergy = startEnergy;
-
         this.animals = new ArrayList<>(0);
 
     }
@@ -24,6 +23,7 @@ public class SimulationEngine {
     public void createAnimals() {
         Animal animal;
         Vector2d position;
+
         for (int i = 0; i < this.initialNumOfAnimals; i++) {
             position = this.map.getRandomPosition();
             if (position == null) {
@@ -38,15 +38,23 @@ public class SimulationEngine {
         }
     }
 
+    public void addAnimals(List<Animal> children) {
+        this.animals.addAll(children);
+    }
+
+    public void deleteAnimals(List<Animal> deadAnimals) {
+        this.animals.removeAll(deadAnimals);
+    }
+
     public void run() {
         while (true) {
-            this.map.removeDeadAnimals();
+            deleteAnimals(this.map.removeDeadAnimals());
             for (Animal animal : animals) {
                 animal.move();
             }
             this.map.feedAnimals();
-//          TODO reproduce
-//          TODO addGrass
+            addAnimals(this.map.reproduceAnimals());
+            this.map.addGrass();
         }
     }
 

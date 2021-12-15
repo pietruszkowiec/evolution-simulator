@@ -40,8 +40,21 @@ public class AnimalSet {
                 break;
             }
         }
-
         return strongestAnimals;
+    }
+
+    public List<Animal> firstTwo() {
+        List<Animal> firstTwoAnimals = new LinkedList<>();
+        int i = 0;
+
+        for (Animal animal : this.animals) {
+            if (i == 2) {
+                break;
+            }
+            firstTwoAnimals.add(animal);
+            i++;
+        }
+        return firstTwoAnimals;
     }
 
     public boolean isEmpty() {

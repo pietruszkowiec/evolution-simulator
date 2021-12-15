@@ -12,6 +12,10 @@ public abstract class AbstractWorldMap implements IWorldMap {
     protected final int moveEnergy;
     protected final int plantEnergy;
     protected final float jungleRatio;
+    protected final int jungleWidth, jungleHeight;
+    protected final Vector2d jungleLowerLeft;
+    protected final Vector2d jungleUpperRight;
+    protected final Random random;
     protected HashMap<Vector2d, AnimalSet> animalSets;
     protected HashMap<Vector2d, Grass> grassMap;
 
@@ -24,15 +28,26 @@ public abstract class AbstractWorldMap implements IWorldMap {
         this.moveEnergy = moveEnergy;
         this.plantEnergy = plantEnergy;
         this.jungleRatio = jungleRatio;
+
+        this.jungleWidth = (int) (width * jungleRatio);
+        this.jungleHeight = (int) (height * jungleRatio);
+        int jungleLowerLeftX = (this.width - this.jungleWidth) / 2;
+        int jungleLowerLeftY = (this.height - this.jungleHeight) / 2;
+        this.jungleLowerLeft = new Vector2d(jungleLowerLeftX, jungleLowerLeftY);
+        this.jungleUpperRight = new Vector2d(jungleLowerLeftX+this.jungleWidth,
+                jungleLowerLeftY+this.jungleHeight);
+
+        this.random = new Random();
     }
 
     public void placeAnimal(Animal animal) {
         Vector2d position = animal.getPosition();
+        AnimalSet animalSet;
         if (isOccupiedByAnimal(position)) {
-            AnimalSet animalSet = this.animalSets.get(position);
+            animalSet = this.animalSets.get(position);
             animalSet.add(animal);
         } else {
-            AnimalSet animalSet = new AnimalSet();
+            animalSet = new AnimalSet();
             animalSet.add(animal);
             this.animalSets.put(position, animalSet);
         }
@@ -74,53 +89,138 @@ public abstract class AbstractWorldMap implements IWorldMap {
         return grassMap.containsKey(position);
     }
 
+    public boolean isInJungle(Vector2d position) {
+        return position.follows(this.jungleLowerLeft)
+                && position.precedes(this.jungleUpperRight);
+    }
+
     public Vector2d getRandomPosition() {
         Vector2d position;
-        Random random = new Random();
         int x, y;
         int i = 0;
+        int mapArea = this.width * this.height;
 
         do {
-            x = random.nextInt(this.width);
-            y = random.nextInt(this.height);
+            x = this.random.nextInt(this.width);
+            y = this.random.nextInt(this.height);
             position = new Vector2d(x, y);
             i++;
-        } while (isOccupied(position) && i < this.width * this.height);
+        } while (isOccupied(position) && i < mapArea);
 
         if (isOccupied(position)) {
             return null;
         }
+
         return position;
     }
 
-    public void removeDeadAnimals() {
-        List<AnimalSet> animalSetsList = new LinkedList<>();
-        animalSetsList.addAll(this.animalSets.values());
+    public Vector2d getRandomPositionInJungle() {
+        Vector2d position;
+        int x, y;
+        int i = 0;
+        int jungleArea = this.jungleWidth * this.jungleHeight;
+
+        do {
+            x = this.random.nextInt(this.jungleWidth);
+            y = this.random.nextInt(this.jungleHeight);
+            position = this.jungleLowerLeft.add(new Vector2d(x, y));
+            i++;
+        } while (isOccupied(position) && i < jungleArea);
+
+        if (isOccupied(position)) {
+            return null;
+        }
+
+        return position;
+    }
+
+    public Vector2d getRandomPositionOutsideJungle() {
+        Vector2d position;
+        int x, y;
+        int i = 0;
+        int notJungleArea = this.width * this.height
+                - this.jungleWidth * this.jungleHeight;
+
+        do {
+            x = this.random.nextInt(this.width);
+            y = this.random.nextInt(this.height);
+            position = new Vector2d(x, y);
+            i++;
+        } while (isOccupied(position) && isInJungle(position) && i < notJungleArea);
+
+        if (isOccupied(position)) {
+            return null;
+        }
+
+        return position;
+    }
+
+    public List<Animal> removeDeadAnimals() {
+        List<AnimalSet> animalSetsList = new LinkedList<>(this.animalSets.values());
+        List<Animal> deadAnimals = new LinkedList<>();
+        Animal deadAnimal;
+
         for (AnimalSet animalSet : animalSetsList) {
             while (!(animalSet.isEmpty()) && animalSet.last().getEnergy() == 0) {
-                animalSet.remove(animalSet.last());
+                deadAnimal = animalSet.last();
+                deadAnimals.add(deadAnimal);
+                animalSet.remove(deadAnimal);
             }
-            if (animalSet.isEmpty()) {
+            if (!(animalSet.isEmpty())) {
                 this.animalSets.remove(animalSet);
             }
         }
+
+        return deadAnimals;
     }
 
     public void feedAnimals() {
         List<Animal> strongestAnimals;
+        AnimalSet animalSet;
+
         for (Vector2d position : this.animalSets.keySet()) {
             if (isOccupiedByGrass(position)) {
-                AnimalSet animalSet = this.animalSets.get(position);
+                animalSet = this.animalSets.get(position);
                 strongestAnimals = animalSet.firstWithTies();
-
                 int energyForEach = this.plantEnergy / strongestAnimals.size();
-
                 for (Animal animal : strongestAnimals) {
                     animal.increaseEnergy(energyForEach);
                 }
-
                 this.grassMap.remove(position);
             }
+        }
+    }
+
+    public List<Animal> reproduceAnimals() {
+        List<Animal> firstTwoAnimals;
+        List<Animal> children = new LinkedList<>();
+        Animal firstParent;
+        Animal secondParent;
+        Animal child;
+
+        for (AnimalSet animalSet : this.animalSets.values()) {
+            firstTwoAnimals = animalSet.firstTwo();
+            if (firstTwoAnimals.size() == 2) {
+                firstParent = firstTwoAnimals.get(0);
+                secondParent = firstTwoAnimals.get(1);
+                child = firstParent.reproduce(secondParent);
+                children.add(child);
+                animalSet.add(child);
+            }
+        }
+
+        return children;
+    }
+
+    public void addGrass() {
+        Vector2d inJunglePosition = getRandomPositionInJungle();
+        Vector2d outsideJunglePosition = getRandomPositionOutsideJungle();
+
+        if (inJunglePosition != null) {
+            placeGrass(new Grass(inJunglePosition));
+        }
+        if (outsideJunglePosition != null) {
+            placeGrass(new Grass(outsideJunglePosition));
         }
     }
 }
