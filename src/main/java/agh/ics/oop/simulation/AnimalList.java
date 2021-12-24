@@ -2,15 +2,17 @@ package agh.ics.oop.simulation;
 
 import java.util.*;
 
-public class AnimalSet {
-    private final SortedSet<Animal> animals;
+public class AnimalList {
+    private final List<Animal> animals;
+    private static EnergyComparator energyComparator = new EnergyComparator();
 
-    public AnimalSet() {
-        this.animals = new TreeSet<>(new EnergyComparator());
+    public AnimalList() {
+        this.animals = new ArrayList<>(0);
     }
 
-    public boolean add(Animal animal) {
-        return this.animals.add(animal);
+    public void add(Animal animal) {
+        this.animals.add(animal);
+        Collections.sort(this.animals, AnimalList.energyComparator);
     }
 
     public boolean remove(Animal animal) {
@@ -25,14 +27,14 @@ public class AnimalSet {
         if (this.animals.isEmpty()) {
             return null;
         }
-        return this.animals.first();
+        return this.animals.get(0);
     }
 
     public Animal last() {
         if (this.animals.isEmpty()) {
             return null;
         }
-        return this.animals.last();
+        return this.animals.get(this.animals.size() - 1);
     }
 
     public List<Animal> firstWithTies() {
@@ -42,7 +44,7 @@ public class AnimalSet {
             return strongestAnimals;
         }
 
-        Animal firstAnimal = this.animals.first();
+        Animal firstAnimal = this.animals.get(0);
 
         for (Animal animal : this.animals) {
             if (animal.getEnergy() == firstAnimal.getEnergy()) {

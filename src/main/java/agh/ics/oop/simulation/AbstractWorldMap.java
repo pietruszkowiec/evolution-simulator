@@ -13,7 +13,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final Vector2d jungleLowerLeft;
     protected final Vector2d jungleUpperRight;
     protected final Random random;
-    protected HashMap<Vector2d, AnimalSet> animalSets;
+    protected HashMap<Vector2d, AnimalList> animalSets;
     protected HashMap<Vector2d, Grass> grassMap;
     protected MapVisualizer mapVisualizer;
 
@@ -42,16 +42,24 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         this.grassMap = new LinkedHashMap<>(0);
     }
 
+    public Vector2d getLowerLeft() {
+        return lowerLeft;
+    }
+
+    public Vector2d getUpperRight() {
+        return upperRight;
+    }
+
     public void placeAnimal(Animal animal) {
         Vector2d position = animal.getPosition();
-        AnimalSet animalSet;
+        AnimalList animalList;
         if (isOccupiedByAnimal(position)) {
-            animalSet = this.animalSets.get(position);
-            animalSet.add(animal);
+            animalList = this.animalSets.get(position);
+            animalList.add(animal);
         } else {
-            animalSet = new AnimalSet();
-            animalSet.add(animal);
-            this.animalSets.put(position, animalSet);
+            animalList = new AnimalList();
+            animalList.add(animal);
+            this.animalSets.put(position, animalList);
         }
     }
 
@@ -72,8 +80,8 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
     public Animal animalAt(Vector2d position) {
         if (isOccupiedByAnimal(position)) {
-            AnimalSet animalSet = animalSets.get(position);
-            return animalSet.first();
+            AnimalList animalList = animalSets.get(position);
+            return animalList.first();
         }
         return null;
     }
@@ -164,18 +172,17 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     }
 
     public List<Animal> removeDeadAnimals() {
-        List<AnimalSet> animalSetsList = new LinkedList<>(this.animalSets.values());
+        List<AnimalList> animalSetsList = new LinkedList<>(this.animalSets.values());
         List<Animal> deadAnimals = new LinkedList<>();
         Animal deadAnimal;
-
-        for (AnimalSet animalSet : animalSetsList) {
-            while (!(animalSet.isEmpty()) && animalSet.last().isDead()) {
-                deadAnimal = animalSet.last();
+        for (AnimalList animalList : animalSetsList) {
+            while (!(animalList.isEmpty()) && animalList.last().isDead()) {
+                deadAnimal = animalList.last();
                 deadAnimals.add(deadAnimal);
-                animalSet.remove(deadAnimal);
+                animalList.remove(deadAnimal);
             }
-            if (animalSet.isEmpty()) {
-                this.animalSets.remove(animalSet);
+            if (animalList.isEmpty()) {
+                this.animalSets.remove(animalList);
             }
         }
 
@@ -184,17 +191,17 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
     public void feedAnimals(int plantEnergy) {
         List<Animal> strongestAnimals;
-        AnimalSet animalSet;
+        AnimalList animalList;
 
         for (Vector2d position : this.animalSets.keySet()) {
             if (isOccupiedByGrass(position)) {
-                animalSet = this.animalSets.get(position);
-                strongestAnimals = animalSet.firstWithTies();
+                animalList = this.animalSets.get(position);
+                strongestAnimals = animalList.firstWithTies();
                 int energyForEach = plantEnergy / strongestAnimals.size();
                 for (Animal animal : strongestAnimals) {
                     animal.increaseEnergy(energyForEach);
-                    animalSet.remove(animal);
-                    animalSet.add(animal);
+                    animalList.remove(animal);
+                    animalList.add(animal);
                 }
                 this.grassMap.remove(position);
             }
@@ -208,15 +215,15 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         Animal secondParent;
         Animal child;
 
-        for (AnimalSet animalSet : this.animalSets.values()) {
-            firstTwoAnimals = animalSet.firstTwo();
+        for (AnimalList animalList : this.animalSets.values()) {
+            firstTwoAnimals = animalList.firstTwo();
             if (firstTwoAnimals.size() == 2) {
                 firstParent = firstTwoAnimals.get(0);
                 secondParent = firstTwoAnimals.get(1);
                 if (firstParent.canReproduce() && secondParent.canReproduce()) {
                     child = firstParent.reproduce(secondParent);
                     children.add(child);
-                    animalSet.add(child);
+                    animalList.add(child);
                     child.addObserver(this);
                 }
             }
@@ -238,16 +245,16 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     }
 
     public void positionChanged(Vector2d oldPosition, Animal animal) {
-        AnimalSet animalSet = this.animalSets.get(oldPosition);
-        animalSet.remove(animal);
+        AnimalList animalList = this.animalSets.get(oldPosition);
+        animalList.remove(animal);
         placeAnimal(animal);
     }
 
     public void energyChanged(Animal animal) {
         Vector2d position = animal.getPosition();
-        AnimalSet animalSet = this.animalSets.get(position);
-        animalSet.remove(animal);
-        animalSet.add(animal);
+        AnimalList animalList = this.animalSets.get(position);
+        animalList.remove(animal);
+        animalList.add(animal);
     }
 
     @Override
