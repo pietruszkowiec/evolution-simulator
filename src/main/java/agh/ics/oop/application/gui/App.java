@@ -2,84 +2,66 @@ package agh.ics.oop.application.gui;
 
 import agh.ics.oop.simulation.*;
 import javafx.application.Application;
-import javafx.scene.Node;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.RowConstraints;
+import javafx.scene.Scene;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-public class App extends Application implements IAnimalObserver {
-    private final int CELL_SIZE = 40;
-    private final int moveDelay = 300;
-    private AbstractWorldMap map;
-    private SimulationEngine engine;
-    private GridPane grid;
+import java.util.List;
+
+public class App extends Application {
+    private int moveDelay = 33;
+    private BoundedMap leftMap;
+    private UnboundedMap rightMap;
+    private ThreadedSimulationEngine leftEngine;
+    private ThreadedSimulationEngine rightEngine;
+    private int mapWidth = 500;
+    private int mapHeight = 500;
 
     @Override
-    public void init() {
-        int width = 100;
-        int height = 100;
-        float jungleRatio = 0.9f;
-        int initialNumOfAnimals = 1000;
-        int initialNumOfGrass = 10000;
-        int startEnergy = 10;
+    public void init() throws IllegalArgumentException {
+        int width = 20;
+        int height = 20;
+        float jungleRatio = 0.3f;
+        int initialNumOfAnimals = 100;
+        int initialNumOfGrass = 0;
+        int startEnergy = 150;
         int moveEnergy = 1;
-        int plantEnergy = 8;
+        int plantEnergy = 20;
 
-        this.map = new BoundedMap(width, height, jungleRatio);
-        this.engine = new ThreadedSimulationEngine(this.map,
+        int cellSize = Math.min(mapWidth / width, mapHeight / height);
+
+        this.leftMap = new BoundedMap(width, height, jungleRatio, cellSize);
+        this.rightMap = new UnboundedMap(width, height, jungleRatio, cellSize);
+        this.leftEngine = new ThreadedSimulationEngine(this.leftMap,
+                initialNumOfAnimals, initialNumOfGrass,
+                startEnergy, moveEnergy, plantEnergy,
+                this.moveDelay);
+        this.rightEngine = new ThreadedSimulationEngine(this.rightMap,
                 initialNumOfAnimals, initialNumOfGrass,
                 startEnergy, moveEnergy, plantEnergy,
                 this.moveDelay);
     }
 
-    public void drawGrid() {
-        Vector2d lowerLeft = this.map.getLowerLeft();
-        Vector2d upperRight = this.map.getUpperRight();
-        int width = upperRight.x - lowerLeft.x;
-        int height = upperRight.y - lowerLeft.y;
-        Node gridLines = this.grid.getChildren().get(0);
-        this.grid.getChildren().clear();
-        this.grid.getColumnConstraints().clear();
-        this.grid.getRowConstraints().clear();
-        this.grid.getChildren().add(0, gridLines);
-        int x, y;
-        for(int i = 0; i < height; i++) {
-            y = height - 1 - i + lowerLeft.y;
-            this.grid.getRowConstraints().add(new RowConstraints(CELL_SIZE));
-//            this.grid.add(makeLabel("" + y), 0, i + 1);
-        }
-        for(int j = 0; j < width; j++) {
-            x = j + lowerLeft.x;
-            this.grid.getColumnConstraints().add(new ColumnConstraints(CELL_SIZE));
-//            this.grid.add(makeLabel("" + x), j + 1, 0);
-        }
-        for(int i = 0; i < height; i++) {
-            y = height - 1 - i + lowerLeft.y;
-            for(int j = 0; j < width; j++) {
-                x = j + lowerLeft.x;
-                Object element = this.map.objectAt(new Vector2d(x, y));
-                if(element != null) {
-//                    GuiElementBox guiBox = new GuiElementBox((IMapElement) element);
-//                    this.grid.add(guiBox.getvBox(), j + 1, i + 1);
-                }
-            }
-        }
-    }
-
-
     @Override
-    public void positionChanged(Vector2d oldPosition, Animal animal) {
-//        Platform.runLater(System.out.println("runLater"););
+    public void start(Stage primaryStage) {
+        VBox leftVBox = new VBox(this.leftMap.getMapGrid().getGrid());
+        VBox rightVBox = new VBox(this.rightMap.getMapGrid().getGrid());
+        HBox mainHBox = new HBox(leftVBox, rightVBox);
+        Scene scene = new Scene(mainHBox, 2 * mapWidth, mapHeight);
+        primaryStage.setScene(scene);
+        primaryStage.show();
+        this.leftMap.drawMap();
+        this.rightMap.drawMap();
+        Thread leftThread = new Thread(this.leftEngine);
+        Thread rightThread = new Thread(this.rightEngine);
+        leftThread.start();
+        rightThread.start();
     }
 
-    @Override
-    public void energyChanged(Animal animal) {
-
-    }
-
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-
-    }
+//    @Override
+//    public void stop() throws Exception {
+//        super.stop();
+//        System.exit(0);
+//    }
 }

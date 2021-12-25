@@ -1,6 +1,8 @@
 package agh.ics.oop.simulation;
 
-public class ThreadedSimulationEngine extends SimulationEngine {
+import javafx.application.Platform;
+
+public class ThreadedSimulationEngine extends SimulationEngine implements Runnable {
     private final int moveDelay;
 
     public ThreadedSimulationEngine(AbstractWorldMap map,
@@ -12,9 +14,9 @@ public class ThreadedSimulationEngine extends SimulationEngine {
         this.moveDelay = moveDelay;
     }
 
-
+    @Override
     public void run() {
-        for (int i = 0; i < 10000; i++) {
+        while (true) {
             try {
                 deleteAnimals(this.map.removeDeadAnimals());
                 for (Animal animal : animals) {
@@ -23,12 +25,15 @@ public class ThreadedSimulationEngine extends SimulationEngine {
                 this.map.feedAnimals(this.plantEnergy);
                 addAnimals(this.map.reproduceAnimals());
                 this.map.addGrass();
-                if (this.animals.size() == 0) {
-                    break;
-                }
+//                if (this.animals.size() == 0) {
+//                    break;
+//                }
+                Platform.runLater(() -> this.map.drawMap());
+//                this.map.drawMap();
                 Thread.sleep(this.moveDelay);
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
+                break;
             }
         }
     }

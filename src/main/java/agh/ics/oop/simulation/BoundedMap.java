@@ -1,8 +1,8 @@
 package agh.ics.oop.simulation;
 
 public class BoundedMap extends AbstractWorldMap {
-    public BoundedMap(int width, int height, float jungleRatio) {
-        super(width, height, jungleRatio);
+    public BoundedMap(int width, int height, float jungleRatio, int cellSize) {
+        super(width, height, jungleRatio, cellSize);
     }
 
     @Override

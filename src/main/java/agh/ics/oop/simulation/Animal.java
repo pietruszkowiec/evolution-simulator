@@ -5,7 +5,7 @@ import java.util.*;
 public class Animal {
     private Vector2d position;
     private int energy;
-    private final int startEnergy;
+    public final int startEnergy;
     private MapDirection direction = MapDirection.getRandomDirection();
     public final List<Gene> genome;
     public static final int genomeLength = 32;

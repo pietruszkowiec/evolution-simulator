@@ -1,6 +1,8 @@
 package agh.ics.oop.simulation;
 
 import agh.ics.oop.application.MapVisualizer;
+import agh.ics.oop.application.gui.MapGrid;
+import javafx.application.Platform;
 
 import java.util.*;
 
@@ -12,33 +14,34 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final int jungleWidth, jungleHeight;
     protected final Vector2d jungleLowerLeft;
     protected final Vector2d jungleUpperRight;
+    protected final int cellSize;
     protected final Random random;
-    protected HashMap<Vector2d, AnimalList> animalSets;
+    protected final MapGrid mapGrid;
+    protected HashMap<Vector2d, AnimalList> animalLists;
     protected HashMap<Vector2d, Grass> grassMap;
     protected MapVisualizer mapVisualizer;
 
-    public AbstractWorldMap(int width, int height, float jungleRatio) {
+    public AbstractWorldMap(int width, int height, float jungleRatio, int cellSize) {
         this.width = width;
         this.height = height;
         this.lowerLeft = new Vector2d(0, 0);
         this.upperRight = new Vector2d(width-1, height-1);
         this.jungleRatio = jungleRatio;
+        this.cellSize = cellSize;
 
         this.jungleWidth = (int) (width * jungleRatio);
         this.jungleHeight = (int) (height * jungleRatio);
         int jungleLowerLeftX = (this.width - this.jungleWidth) / 2;
         int jungleLowerLeftY = (this.height - this.jungleHeight) / 2;
-        System.out.println(jungleLowerLeftX + " " + jungleLowerLeftY);
-        System.out.println((jungleLowerLeftX+this.jungleWidth) + " "
-                + (jungleLowerLeftY+this.jungleHeight));
         this.jungleLowerLeft = new Vector2d(jungleLowerLeftX, jungleLowerLeftY);
         this.jungleUpperRight = new Vector2d(jungleLowerLeftX+this.jungleWidth,
                 jungleLowerLeftY+this.jungleHeight);
 
         this.random = new Random();
         this.mapVisualizer = new MapVisualizer(this);
+        this.mapGrid = new MapGrid(this, cellSize);
 
-        this.animalSets = new LinkedHashMap<>(0);
+        this.animalLists = new LinkedHashMap<>(0);
         this.grassMap = new LinkedHashMap<>(0);
     }
 
@@ -50,16 +53,20 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         return upperRight;
     }
 
+    public MapGrid getMapGrid() {
+        return mapGrid;
+    }
+
     public void placeAnimal(Animal animal) {
         Vector2d position = animal.getPosition();
         AnimalList animalList;
         if (isOccupiedByAnimal(position)) {
-            animalList = this.animalSets.get(position);
+            animalList = this.animalLists.get(position);
             animalList.add(animal);
         } else {
-            animalList = new AnimalList();
+            animalList = new AnimalList(position);
             animalList.add(animal);
-            this.animalSets.put(position, animalList);
+            this.animalLists.put(position, animalList);
         }
     }
 
@@ -80,7 +87,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
     public Animal animalAt(Vector2d position) {
         if (isOccupiedByAnimal(position)) {
-            AnimalList animalList = animalSets.get(position);
+            AnimalList animalList = animalLists.get(position);
             return animalList.first();
         }
         return null;
@@ -98,7 +105,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     }
 
     public boolean isOccupiedByAnimal(Vector2d position) {
-        return animalSets.containsKey(position);
+        return animalLists.containsKey(position) && !(animalLists.get(position).isEmpty());
     }
 
     public boolean isOccupiedByGrass(Vector2d position) {
@@ -172,18 +179,19 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     }
 
     public List<Animal> removeDeadAnimals() {
-        List<AnimalList> animalSetsList = new LinkedList<>(this.animalSets.values());
+        List<AnimalList> animalListLists = new LinkedList<>(this.animalLists.values());
         List<Animal> deadAnimals = new LinkedList<>();
         Animal deadAnimal;
-        for (AnimalList animalList : animalSetsList) {
+
+        for (AnimalList animalList : animalListLists) {
             while (!(animalList.isEmpty()) && animalList.last().isDead()) {
                 deadAnimal = animalList.last();
                 deadAnimals.add(deadAnimal);
                 animalList.remove(deadAnimal);
             }
-            if (animalList.isEmpty()) {
-                this.animalSets.remove(animalList);
-            }
+//            if (animalList.isEmpty()) {
+//                this.animalLists.remove(animalList);
+//            }
         }
 
         return deadAnimals;
@@ -193,10 +201,13 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         List<Animal> strongestAnimals;
         AnimalList animalList;
 
-        for (Vector2d position : this.animalSets.keySet()) {
+        for (Vector2d position : this.animalLists.keySet()) {
             if (isOccupiedByGrass(position)) {
-                animalList = this.animalSets.get(position);
+                animalList = this.animalLists.get(position);
                 strongestAnimals = animalList.firstWithTies();
+                if (strongestAnimals.size() == 0) {
+                    continue;
+                }
                 int energyForEach = plantEnergy / strongestAnimals.size();
                 for (Animal animal : strongestAnimals) {
                     animal.increaseEnergy(energyForEach);
@@ -215,7 +226,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         Animal secondParent;
         Animal child;
 
-        for (AnimalList animalList : this.animalSets.values()) {
+        for (AnimalList animalList : this.animalLists.values()) {
             firstTwoAnimals = animalList.firstTwo();
             if (firstTwoAnimals.size() == 2) {
                 firstParent = firstTwoAnimals.get(0);
@@ -245,16 +256,23 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     }
 
     public void positionChanged(Vector2d oldPosition, Animal animal) {
-        AnimalList animalList = this.animalSets.get(oldPosition);
+        AnimalList animalList = this.animalLists.get(oldPosition);
         animalList.remove(animal);
+//        if (animalList.isEmpty()) {
+//            this.animalLists.remove(animalList);
+//        }
         placeAnimal(animal);
     }
 
     public void energyChanged(Animal animal) {
         Vector2d position = animal.getPosition();
-        AnimalList animalList = this.animalSets.get(position);
+        AnimalList animalList = this.animalLists.get(position);
         animalList.remove(animal);
         animalList.add(animal);
+    }
+
+    public void drawMap() {
+        this.mapGrid.drawGrid();
     }
 
     @Override

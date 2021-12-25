@@ -4,10 +4,16 @@ import java.util.*;
 
 public class AnimalList {
     private final List<Animal> animals;
+    private final Vector2d position;
     private static EnergyComparator energyComparator = new EnergyComparator();
 
-    public AnimalList() {
+    public AnimalList(Vector2d position) {
         this.animals = new ArrayList<>(0);
+        this.position = position;
+    }
+
+    public Vector2d getPosition() {
+        return position;
     }
 
     public void add(Animal animal) {
@@ -24,14 +30,14 @@ public class AnimalList {
     }
 
     public Animal first() {
-        if (this.animals.isEmpty()) {
+        if (isEmpty()) {
             return null;
         }
         return this.animals.get(0);
     }
 
     public Animal last() {
-        if (this.animals.isEmpty()) {
+        if (isEmpty()) {
             return null;
         }
         return this.animals.get(this.animals.size() - 1);
@@ -40,7 +46,7 @@ public class AnimalList {
     public List<Animal> firstWithTies() {
         List<Animal> strongestAnimals = new LinkedList<>();
 
-        if (this.animals.isEmpty()) {
+        if (isEmpty()) {
             return strongestAnimals;
         }
 
@@ -71,7 +77,7 @@ public class AnimalList {
     }
 
     public boolean isEmpty() {
-        return this.animals.isEmpty();
+        return this.animals.size() == 0;
     }
 
     public int size() {
