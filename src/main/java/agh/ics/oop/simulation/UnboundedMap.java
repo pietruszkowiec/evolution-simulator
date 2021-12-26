@@ -1,8 +1,8 @@
 package agh.ics.oop.simulation;
 
 public class UnboundedMap extends AbstractWorldMap {
-    public UnboundedMap(int width, int height, float jungleRatio, int cellSize) {
-        super(width, height, jungleRatio, cellSize);
+    public UnboundedMap(int width, int height, float jungleRatio, int cellSize, int moveEnergy, int plantEnergy) {
+        super(width, height, jungleRatio, cellSize, moveEnergy, plantEnergy);
     }
 
     @Override

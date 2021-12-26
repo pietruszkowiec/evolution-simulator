@@ -1,49 +1,44 @@
 package agh.ics.oop.simulation;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class AnimalList {
-    private final List<Animal> animals;
-    private final Vector2d position;
+    private final CopyOnWriteArrayList<Animal> animals;
     private static EnergyComparator energyComparator = new EnergyComparator();
 
-    public AnimalList(Vector2d position) {
-        this.animals = new ArrayList<>(0);
-        this.position = position;
+    public AnimalList() {
+        this.animals = new CopyOnWriteArrayList<>();
     }
 
-    public Vector2d getPosition() {
-        return position;
+    public synchronized CopyOnWriteArrayList<Animal> getAnimals() {
+        return animals;
     }
 
-    public void add(Animal animal) {
+    public synchronized void add(Animal animal) {
         this.animals.add(animal);
         Collections.sort(this.animals, AnimalList.energyComparator);
     }
 
-    public boolean remove(Animal animal) {
+    public synchronized boolean remove(Animal animal) {
         return this.animals.remove(animal);
     }
 
-    public boolean contains(Animal animal) {
-        return this.animals.contains(animal);
-    }
-
-    public Animal first() {
+    public synchronized Animal first() {
         if (isEmpty()) {
             return null;
         }
         return this.animals.get(0);
     }
 
-    public Animal last() {
+    public synchronized Animal last() {
         if (isEmpty()) {
             return null;
         }
         return this.animals.get(this.animals.size() - 1);
     }
 
-    public List<Animal> firstWithTies() {
+    public synchronized List<Animal> firstWithTies() {
         List<Animal> strongestAnimals = new LinkedList<>();
 
         if (isEmpty()) {
@@ -62,7 +57,7 @@ public class AnimalList {
         return strongestAnimals;
     }
 
-    public List<Animal> firstTwo() {
+    public synchronized List<Animal> firstTwo() {
         List<Animal> firstTwoAnimals = new LinkedList<>();
         int i = 0;
 
@@ -79,9 +74,4 @@ public class AnimalList {
     public boolean isEmpty() {
         return this.animals.size() == 0;
     }
-
-    public int size() {
-        return this.animals.size();
-    }
-
 }

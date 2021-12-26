@@ -12,6 +12,15 @@ public enum MapDirection {
     WEST,
     NORTH_WEST;
 
+    private static final Vector2d northUnitVector = new Vector2d(0, 1);
+    private static final Vector2d northEastUnitVector = new Vector2d(1, 1);
+    private static final Vector2d eastUnitVector = new Vector2d(1, 0);
+    private static final Vector2d southEastUnitVector = new Vector2d(1, -1);
+    private static final Vector2d southUnitVector = new Vector2d(0, -1);
+    private static final Vector2d southWestUnitVector = new Vector2d(-1, -1);
+    private static final Vector2d westUnitVector = new Vector2d(-1, 0);
+    private static final Vector2d northWestUnitVector = new Vector2d(-1, 1);
+
     @Override
     public String toString() {
         return switch (this) {
@@ -68,14 +77,14 @@ public enum MapDirection {
 
     public Vector2d toUnitVector() {
         return switch (this) {
-            case NORTH -> new Vector2d(0, 1);
-            case NORTH_EAST -> new Vector2d(1, 1);
-            case EAST -> new Vector2d(1, 0);
-            case SOUTH_EAST -> new Vector2d(1, -1);
-            case SOUTH -> new Vector2d(0, -1);
-            case SOUTH_WEST -> new Vector2d(-1, -1);
-            case WEST -> new Vector2d(-1, 0);
-            case NORTH_WEST -> new Vector2d(-1, 1);
+            case NORTH -> northUnitVector;
+            case NORTH_EAST -> northEastUnitVector;
+            case EAST -> eastUnitVector;
+            case SOUTH_EAST -> southEastUnitVector;
+            case SOUTH -> southUnitVector;
+            case SOUTH_WEST -> southWestUnitVector;
+            case WEST -> westUnitVector;
+            case NORTH_WEST -> northWestUnitVector;
         };
     }
 

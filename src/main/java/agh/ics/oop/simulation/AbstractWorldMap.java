@@ -1,10 +1,9 @@
 package agh.ics.oop.simulation;
 
-import agh.ics.oop.application.MapVisualizer;
 import agh.ics.oop.application.gui.MapGrid;
-import javafx.application.Platform;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final int width, height;
@@ -17,17 +16,21 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final int cellSize;
     protected final Random random;
     protected final MapGrid mapGrid;
-    protected HashMap<Vector2d, AnimalList> animalLists;
+    protected final int moveEnergy;
+    protected final int plantEnergy;
+    protected ConcurrentHashMap<Vector2d, AnimalList> animalLists;
     protected HashMap<Vector2d, Grass> grassMap;
-    protected MapVisualizer mapVisualizer;
 
-    public AbstractWorldMap(int width, int height, float jungleRatio, int cellSize) {
+    public AbstractWorldMap(int width, int height, float jungleRatio, int cellSize,
+                            int moveEnergy, int plantEnergy) {
         this.width = width;
         this.height = height;
         this.lowerLeft = new Vector2d(0, 0);
         this.upperRight = new Vector2d(width-1, height-1);
         this.jungleRatio = jungleRatio;
         this.cellSize = cellSize;
+        this.moveEnergy = moveEnergy;
+        this.plantEnergy = plantEnergy;
 
         this.jungleWidth = (int) (width * jungleRatio);
         this.jungleHeight = (int) (height * jungleRatio);
@@ -38,10 +41,9 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
                 jungleLowerLeftY+this.jungleHeight);
 
         this.random = new Random();
-        this.mapVisualizer = new MapVisualizer(this);
         this.mapGrid = new MapGrid(this, cellSize);
 
-        this.animalLists = new LinkedHashMap<>(0);
+        this.animalLists = new ConcurrentHashMap<>(0);
         this.grassMap = new LinkedHashMap<>(0);
     }
 
@@ -64,7 +66,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
             animalList = this.animalLists.get(position);
             animalList.add(animal);
         } else {
-            animalList = new AnimalList(position);
+            animalList = new AnimalList();
             animalList.add(animal);
             this.animalLists.put(position, animalList);
         }
@@ -178,69 +180,66 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         return position;
     }
 
-    public List<Animal> removeDeadAnimals() {
-        List<AnimalList> animalListLists = new LinkedList<>(this.animalLists.values());
-        List<Animal> deadAnimals = new LinkedList<>();
-        Animal deadAnimal;
-
-        for (AnimalList animalList : animalListLists) {
-            while (!(animalList.isEmpty()) && animalList.last().isDead()) {
-                deadAnimal = animalList.last();
-                deadAnimals.add(deadAnimal);
-                animalList.remove(deadAnimal);
-            }
-//            if (animalList.isEmpty()) {
-//                this.animalLists.remove(animalList);
-//            }
-        }
-
-        return deadAnimals;
+    public void removeDeadAnimals() {
+        this.animalLists.forEach(
+                (position, animalList) -> {
+                    while (!(animalList.isEmpty()) && animalList.last().isDead()) {
+                        animalList.remove(animalList.last());
+                    }
+                });
     }
 
-    public void feedAnimals(int plantEnergy) {
-        List<Animal> strongestAnimals;
-        AnimalList animalList;
-
-        for (Vector2d position : this.animalLists.keySet()) {
-            if (isOccupiedByGrass(position)) {
-                animalList = this.animalLists.get(position);
-                strongestAnimals = animalList.firstWithTies();
-                if (strongestAnimals.size() == 0) {
-                    continue;
-                }
-                int energyForEach = plantEnergy / strongestAnimals.size();
-                for (Animal animal : strongestAnimals) {
-                    animal.increaseEnergy(energyForEach);
-                    animalList.remove(animal);
-                    animalList.add(animal);
-                }
-                this.grassMap.remove(position);
-            }
-        }
+    public void moveAnimals() {
+        this.animalLists.forEach(
+                (position, animalList) -> {
+                    if (!(animalList.isEmpty())) {
+                        for (Animal animal : animalList.getAnimals()) {
+                            animal.move(this.moveEnergy);
+                        }
+                    }
+                });
     }
 
-    public List<Animal> reproduceAnimals() {
-        List<Animal> firstTwoAnimals;
-        List<Animal> children = new LinkedList<>();
-        Animal firstParent;
-        Animal secondParent;
-        Animal child;
+    public void feedAnimals() {
+        this.animalLists.forEach(
+                (position, animalList) -> {
+                    if (isOccupiedByGrass(position)) {
+                        List<Animal> strongestAnimals;
+                        animalList = this.animalLists.get(position);
+                        strongestAnimals = animalList.firstWithTies();
+                        if (strongestAnimals.size() > 0) {
+                            int energyForEach = this.plantEnergy / strongestAnimals.size();
+                            for (Animal animal : strongestAnimals) {
+                                animal.increaseEnergy(energyForEach);
+                                animalList.remove(animal);
+                                animalList.add(animal);
+                            }
+                            this.grassMap.remove(position);
+                        }
+                    }
+        });
+    }
 
-        for (AnimalList animalList : this.animalLists.values()) {
-            firstTwoAnimals = animalList.firstTwo();
-            if (firstTwoAnimals.size() == 2) {
-                firstParent = firstTwoAnimals.get(0);
-                secondParent = firstTwoAnimals.get(1);
-                if (firstParent.canReproduce() && secondParent.canReproduce()) {
-                    child = firstParent.reproduce(secondParent);
-                    children.add(child);
-                    animalList.add(child);
-                    child.addObserver(this);
-                }
-            }
-        }
-
-        return children;
+    public void reproduceAnimals() {
+        this.animalLists.forEach(
+                (position, animalList) -> {
+                    List<Animal> firstTwoAnimals;
+                    List<Animal> children = new LinkedList<>();
+                    Animal firstParent;
+                    Animal secondParent;
+                    Animal child;
+                    firstTwoAnimals = animalList.firstTwo();
+                    if (firstTwoAnimals.size() == 2) {
+                        firstParent = firstTwoAnimals.get(0);
+                        secondParent = firstTwoAnimals.get(1);
+                        if (firstParent.canReproduce() && secondParent.canReproduce()) {
+                            child = firstParent.reproduce(secondParent);
+                            children.add(child);
+                            animalList.add(child);
+                            child.addObserver(this);
+                        }
+                    }
+        });
     }
 
     public void addGrass() {
@@ -258,9 +257,6 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     public void positionChanged(Vector2d oldPosition, Animal animal) {
         AnimalList animalList = this.animalLists.get(oldPosition);
         animalList.remove(animal);
-//        if (animalList.isEmpty()) {
-//            this.animalLists.remove(animalList);
-//        }
         placeAnimal(animal);
     }
 
@@ -271,12 +267,15 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         animalList.add(animal);
     }
 
-    public void drawMap() {
-        this.mapGrid.drawGrid();
+    public void nextDayCycle() {
+        removeDeadAnimals();
+        moveAnimals();
+        feedAnimals();
+        reproduceAnimals();
+        addGrass();
     }
 
-    @Override
-    public String toString() {
-        return this.mapVisualizer.draw(this.lowerLeft, this.upperRight);
+    public void drawMap() {
+        this.mapGrid.drawGrid();
     }
 }
