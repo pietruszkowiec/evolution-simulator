@@ -20,6 +20,9 @@ public class App extends Application {
     private int moveEnergy = 1;
     private int plantEnergy = 20;
     private int moveDelay = 100;
+    private boolean magicEvolutionOnUnbounded = false;
+    private boolean magicEvolutionOnBounded = false;
+    private boolean moveStatistics = false;
     private UnboundedMap leftMap;
     private BoundedMap rightMap;
     private ThreadedSimulationEngine leftEngine;
@@ -30,16 +33,20 @@ public class App extends Application {
     private final int sceneHeight = 300;
     private StatisticsPanel leftStatistics;
     private StatisticsPanel rightStatistics;
-    private boolean moveStatistics = true;
 
-    public void initializeMapsAndEngines() {
+    private void initializeMapsAndEngines() {
         int cellSize = Math.min(sceneWidth / width, sceneHeight / height);
 
-        this.leftMap = new UnboundedMap(width, height, jungleRatio, cellSize, moveEnergy, plantEnergy);
-        this.rightMap = new BoundedMap(width, height, jungleRatio, cellSize, moveEnergy, plantEnergy);
+        this.leftMap = new UnboundedMap(width, height, jungleRatio,
+                cellSize, moveEnergy, plantEnergy, magicEvolutionOnUnbounded);
+
+        this.rightMap = new BoundedMap(width, height, jungleRatio, cellSize, moveEnergy, plantEnergy,
+                magicEvolutionOnBounded);
+
         this.leftEngine = new ThreadedSimulationEngine(this.leftMap,
                 initialNumOfAnimals, initialNumOfGrass,
                 startEnergy, this.moveDelay);
+
         this.rightEngine = new ThreadedSimulationEngine(this.rightMap,
                 initialNumOfAnimals, initialNumOfGrass,
                 startEnergy, this.moveDelay);
@@ -51,26 +58,48 @@ public class App extends Application {
         this.rightEngine.setStatisticsPanel(this.rightStatistics);
     }
 
-    public Stage optionsMenu(Stage primaryStage) {
+    private int integerOptionsInRange(TextField textBox,
+                                      int gotVal, int downVal,
+                                      int upVal, int defaultVal) throws IllegalArgumentException {
+        if (gotVal < downVal || gotVal > upVal) {
+            textBox.setText(defaultVal + "");
+            throw new IllegalArgumentException("Value " + gotVal
+                    + " not in range (" + downVal + ", " + upVal + ")");
+        }
+        return gotVal;
+    }
+
+    private float floatOptionsInRange(TextField textBox,
+                                      float gotVal, float downVal,
+                                      float upVal, float defaultVal) throws IllegalArgumentException {
+        if (gotVal < downVal || gotVal > upVal) {
+            textBox.setText(defaultVal + "");
+            throw new IllegalArgumentException("Value " + gotVal
+                    + " not in range (" + downVal + ", " + upVal + ")");
+        }
+        return gotVal;
+    }
+
+    private Stage optionsMenu(Stage primaryStage) {
         GridPane optionsGrid = new GridPane();
 
         optionsGrid.getColumnConstraints().add(new ColumnConstraints(20));
-        optionsGrid.getColumnConstraints().add(new ColumnConstraints(180));
+        optionsGrid.getColumnConstraints().add(new ColumnConstraints(210));
         optionsGrid.getColumnConstraints().add(new ColumnConstraints(180));
         optionsGrid.getColumnConstraints().add(new ColumnConstraints(20));
-        for (int i = 0; i < 11; i++) {
+        for (int i = 0; i < 13; i++) {
             optionsGrid.getRowConstraints().add(new RowConstraints(25));
         }
         optionsGrid.getRowConstraints().add(new RowConstraints(15));
         optionsGrid.getRowConstraints().add(new RowConstraints(30));
         optionsGrid.getRowConstraints().add(new RowConstraints(15));
 
-        Label widthLabel = new Label("Map width ");
+        Label widthLabel = new Label("Map width: ");
         optionsGrid.add(widthLabel, 1, 1);
         TextField widthTextBox = new TextField(this.width + "");
         optionsGrid.add(widthTextBox, 2, 1);
 
-        Label heightLabel = new Label("Map height ");
+        Label heightLabel = new Label("Map height: ");
         optionsGrid.add(heightLabel, 1, 2);
         TextField heightTextBox = new TextField(this.height + "");
         optionsGrid.add(heightTextBox, 2, 2);
@@ -110,53 +139,102 @@ public class App extends Application {
         TextField moveDelayTextBox = new TextField(this.moveDelay + "");
         optionsGrid.add(moveDelayTextBox, 2, 9);
 
+        Label unboundedMagicLabel = new Label("Magic evolution on unbounded map? ");
+        optionsGrid.add(unboundedMagicLabel, 1, 10);
+        CheckBox unboundedMagicCheckBox = new CheckBox();
+        optionsGrid.add(unboundedMagicCheckBox, 2, 10);
+
+        Label boundedMagicLabel = new Label("Magic evolution on bounded map? ");
+        optionsGrid.add(boundedMagicLabel, 1, 11);
+        CheckBox boundedMagicCheckBox = new CheckBox();
+        optionsGrid.add(boundedMagicCheckBox, 2, 11);
+
         Label moveStatisticsLabel = new Label("Move statistic charts? ");
-        optionsGrid.add(moveStatisticsLabel, 1, 10);
+        optionsGrid.add(moveStatisticsLabel, 1, 12);
         CheckBox moveStatisticsCheckBox = new CheckBox();
-        optionsGrid.add(moveStatisticsCheckBox, 2, 10);
+        optionsGrid.add(moveStatisticsCheckBox, 2, 12);
 
         Button startButton = new Button("Start");
-        optionsGrid.add(startButton, 2, 12);
+        optionsGrid.add(startButton, 2, 14);
 
         Scene optionsScene = new Scene(optionsGrid);
         Stage optionsStage = new Stage();
         optionsStage.setScene(optionsScene);
 
         startButton.setOnAction(event -> {
+            try {
+                this.height = integerOptionsInRange(heightTextBox,
+                        Integer.parseInt(heightTextBox.getText()),
+                        2, 100, 20);
 
-            this.height = Integer.parseInt(heightTextBox.getText());
-            this.width = Integer.parseInt(widthTextBox.getText());
-            this.jungleRatio = Float.parseFloat(jungleRatioTextBox.getText());
-            this.initialNumOfAnimals = Integer.parseInt(initialNumOfAnimalsTextBox.getText());
-            this.initialNumOfGrass = Integer.parseInt(initialNumOfGrassTextBox.getText());
-            this.startEnergy = Integer.parseInt(startEnergyTextBox.getText());
-            this.moveEnergy = Integer.parseInt(moveEnergyTextBox.getText());
-            this.plantEnergy = Integer.parseInt(plantEnergyTextBox.getText());
-            this.moveDelay = Integer.parseInt(moveDelayTextBox.getText());
-            this.moveStatistics = moveStatisticsCheckBox.isSelected();
+                this.width = integerOptionsInRange(widthTextBox,
+                        Integer.parseInt(widthTextBox.getText()),
+                        2, 100, 20);
 
-            initializeMapsAndEngines();
+                this.jungleRatio = floatOptionsInRange(jungleRatioTextBox,
+                        Float.parseFloat(jungleRatioTextBox.getText()),
+                        0, 1, 0.3f);
 
-            optionsStage.close();
-            primaryStage.show();
+                this.initialNumOfAnimals = integerOptionsInRange(
+                        initialNumOfAnimalsTextBox,
+                        Integer.parseInt(initialNumOfAnimalsTextBox.getText()),
+                        0, height * width,
+                        (int) (height * jungleRatio * width));
 
-            this.leftMap.drawMap();
-            this.rightMap.drawMap();
+                this.initialNumOfGrass = integerOptionsInRange(
+                        initialNumOfGrassTextBox,
+                        Integer.parseInt(initialNumOfGrassTextBox.getText()),
+                        0, height * width - initialNumOfAnimals, 0);
 
-            this.leftThread = new Thread(this.leftEngine);
-            this.rightThread = new Thread(this.rightEngine);
-            this.leftThread.start();
-            this.rightThread.start();
+                this.startEnergy = integerOptionsInRange(startEnergyTextBox,
+                        Integer.parseInt(startEnergyTextBox.getText()),
+                        0, 1000000, startEnergy);
+
+                this.moveEnergy = integerOptionsInRange(moveEnergyTextBox,
+                        Integer.parseInt(moveEnergyTextBox.getText()),
+                        0, 1000000, moveEnergy);
+
+                this.plantEnergy = integerOptionsInRange(plantEnergyTextBox,
+                        Integer.parseInt(plantEnergyTextBox.getText()),
+                        0, 1000000, plantEnergy);
+
+                this.moveDelay = integerOptionsInRange(moveDelayTextBox,
+                        Integer.parseInt(moveDelayTextBox.getText()),
+                        1, 300, moveDelay);
+
+                this.moveStatistics = moveStatisticsCheckBox.isSelected();
+                this.magicEvolutionOnUnbounded = unboundedMagicCheckBox.isSelected();
+                this.magicEvolutionOnBounded = boundedMagicCheckBox.isSelected();
+
+                initializeMapsAndEngines();
+
+                optionsStage.close();
+                primaryStage.show();
+
+                this.leftMap.drawMap();
+                this.rightMap.drawMap();
+
+                this.leftThread = new Thread(this.leftEngine);
+                this.rightThread = new Thread(this.rightEngine);
+                this.leftThread.start();
+                this.rightThread.start();
+
+            } catch (Exception ex) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, ex.toString(),
+                        ButtonType.OK);
+
+                alert.showAndWait();
+            }
         });
 
         return optionsStage;
     }
 
-    public Button makePauseResumeButton(ThreadedSimulationEngine engine) {
+    private Button makePauseResumeButton(ThreadedSimulationEngine engine) {
         Button pauseResumeButton = new Button("Pause");
 
         pauseResumeButton.setOnAction(event -> {
-            if (engine.isPaused) {
+            if (engine.isPaused()) {
                 engine.resume();
                 pauseResumeButton.setText("Pause");
             } else {
@@ -168,7 +246,7 @@ public class App extends Application {
         return pauseResumeButton;
     }
 
-    public BorderPane makePane(ThreadedSimulationEngine engine, AbstractWorldMap map) {
+    private BorderPane makePane(ThreadedSimulationEngine engine, AbstractWorldMap map) {
         BorderPane pane = new BorderPane();
 
         Button pauseResumeButton = makePauseResumeButton(engine);
@@ -222,6 +300,7 @@ public class App extends Application {
 
         VBox mainVBox = new VBox(new Label(), hSeparatorUp,
                 mainHBox, hSeparatorDown);
+
         Scene scene = new Scene(mainVBox);
         primaryStage.setScene(scene);
     }

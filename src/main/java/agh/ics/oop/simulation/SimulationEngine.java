@@ -1,10 +1,10 @@
 package agh.ics.oop.simulation;
 
 public class SimulationEngine {
-    public final AbstractWorldMap map;
-    protected final int initialNumOfAnimals;
-    protected final int initialNumOfGrass;
-    protected final int startEnergy;
+    protected final AbstractWorldMap map;
+    private final int initialNumOfAnimals;
+    private final int initialNumOfGrass;
+    private final int startEnergy;
 
     public SimulationEngine(AbstractWorldMap map,
                             int initialNumOfAnimals, int initialNumOfGrass,
@@ -17,7 +17,7 @@ public class SimulationEngine {
         createGrass();
     }
 
-    public void createAnimals() {
+    private void createAnimals() {
         Animal animal;
         Vector2d position;
 
@@ -26,7 +26,6 @@ public class SimulationEngine {
             if (position == null) {
                 position = this.map.getRandomPosition();
                 if (position == null) {
-//                TODO throwing exception, map too small
                     break;
                 }
             }
@@ -36,7 +35,7 @@ public class SimulationEngine {
         }
     }
 
-    public void createGrass() {
+    private void createGrass() {
         Grass grass;
         Vector2d position;
 

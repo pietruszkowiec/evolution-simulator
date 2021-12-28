@@ -10,40 +10,38 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final int width, height;
     protected final Vector2d lowerLeft;
     protected final Vector2d upperRight;
-    protected final float jungleRatio;
-    protected final int jungleWidth, jungleHeight;
-    protected final Vector2d jungleLowerLeft;
-    protected final Vector2d jungleUpperRight;
-    protected final int cellSize;
-    protected final Random random;
-    protected final MapGrid mapGrid;
-    protected final int moveEnergy;
-    protected final int plantEnergy;
-    protected ConcurrentHashMap<Vector2d, AnimalList> animalLists;
-    protected HashMap<Vector2d, Grass> grassMap;
-    protected List<Animal> animals;
-    protected HashMap<Genotype, AtomicInteger> genotypeMap;
-    protected float avgLifeLength = 0;
-    protected int deathCnt = 0;
+    private final int jungleWidth, jungleHeight;
+    private final Vector2d jungleLowerLeft;
+    private final Vector2d jungleUpperRight;
+    private final Random random;
+    private final MapGrid mapGrid;
+    private final int moveEnergy;
+    private final int plantEnergy;
+    private final boolean magicEvolution;
+    private final ConcurrentHashMap<Vector2d, AnimalList> animalLists;
+    private final HashMap<Vector2d, Grass> grassMap;
+    private final List<Animal> animals;
+    private final HashMap<Genotype, AtomicInteger> genotypeMap;
+    private float avgLifeLength = 0;
+    private int deathCnt = 0;
+    private final AtomicInteger magicEvolutionCnt = new AtomicInteger(0);
 
     public AbstractWorldMap(int width, int height, float jungleRatio, int cellSize,
-                            int moveEnergy, int plantEnergy) {
+                            int moveEnergy, int plantEnergy, boolean magicEvolution) {
         this.width = width;
         this.height = height;
         this.lowerLeft = new Vector2d(0, 0);
         this.upperRight = new Vector2d(width-1, height-1);
-        this.jungleRatio = jungleRatio;
-        this.cellSize = cellSize;
         this.moveEnergy = moveEnergy;
         this.plantEnergy = plantEnergy;
+        this.magicEvolution = magicEvolution;
 
         this.jungleWidth = (int) (width * jungleRatio);
         this.jungleHeight = (int) (height * jungleRatio);
         int jungleLowerLeftX = (this.width - this.jungleWidth) / 2;
         int jungleLowerLeftY = (this.height - this.jungleHeight) / 2;
         this.jungleLowerLeft = new Vector2d(jungleLowerLeftX, jungleLowerLeftY);
-        this.jungleUpperRight = new Vector2d(jungleLowerLeftX+this.jungleWidth,
-                jungleLowerLeftY+this.jungleHeight);
+        this.jungleUpperRight = this.upperRight.subtract(jungleLowerLeft);
 
         this.random = new Random();
         this.mapGrid = new MapGrid(this, cellSize);
@@ -54,16 +52,24 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         this.genotypeMap = new LinkedHashMap<>(0);
     }
 
-    public Vector2d getLowerLeft() {
-        return lowerLeft;
-    }
-
     public Vector2d getUpperRight() {
         return upperRight;
     }
 
     public MapGrid getMapGrid() {
         return mapGrid;
+    }
+
+    public int getAnimalsSize() {
+        return this.animals.size();
+    }
+
+    public boolean isMagicEvolution() {
+        return magicEvolution;
+    }
+
+    public AtomicInteger getMagicEvolutionCnt() {
+        return magicEvolutionCnt;
     }
 
     public void incrementGenotypeCnt(Genotype genotype) {
@@ -86,7 +92,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
     public void addNewAnimal(Animal animal) {
         this.animals.add(animal);
-        incrementGenotypeCnt(animal.genotype);
+        incrementGenotypeCnt(animal.getGenotype());
         animal.addObserver(this);
         placeAnimal(animal);
     }
@@ -94,6 +100,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     public void placeAnimal(Animal animal) {
         Vector2d position = animal.getPosition();
         AnimalList animalList;
+
         if (isOccupiedByAnimal(position)) {
             animalList = this.animalLists.get(position);
             animalList.add(animal);
@@ -106,6 +113,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
     public void placeGrass(Grass grass) {
         Vector2d position = grass.getPosition();
+
         if (!(isOccupiedByAnimal(position)) && !(isOccupiedByGrass(position))) {
             this.grassMap.put(position, grass);
         }
@@ -113,6 +121,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
     public Object objectAt(Vector2d position) {
         Animal animal = animalAt(position);
+
         if (animal != null) {
             return animal;
         }
@@ -162,7 +171,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
             y = this.random.nextInt(this.height);
             position = new Vector2d(x, y);
             i++;
-        } while (isOccupied(position) && i < mapArea);
+        } while (isOccupied(position) && i < 2*mapArea);
 
         if (isOccupied(position)) {
             return null;
@@ -177,12 +186,16 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         int i = 0;
         int jungleArea = this.jungleWidth * this.jungleHeight;
 
+        if (jungleArea <= 0) {
+            return null;
+        }
+
         do {
             x = this.random.nextInt(this.jungleWidth);
             y = this.random.nextInt(this.jungleHeight);
             position = this.jungleLowerLeft.add(new Vector2d(x, y));
             i++;
-        } while (isOccupied(position) && i < jungleArea);
+        } while (isOccupied(position) && i < 2*jungleArea);
 
         if (isOccupied(position)) {
             return null;
@@ -198,12 +211,16 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         int notJungleArea = this.width * this.height
                 - this.jungleWidth * this.jungleHeight;
 
+        if (notJungleArea <= 0) {
+            return null;
+        }
+
         do {
             x = this.random.nextInt(this.width);
             y = this.random.nextInt(this.height);
             position = new Vector2d(x, y);
             i++;
-        } while (isOccupied(position) && isInJungle(position) && i < notJungleArea);
+        } while (isOccupied(position) && isInJungle(position) && i < 2*notJungleArea);
 
         if (isOccupied(position)) {
             return null;
@@ -222,13 +239,14 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
                                 + ((float) animal.getAge()) / (deathCnt + 1);
                         deathCnt++;
                         animals.remove(animal);
-                        decrementGenotypeCnt(animal.genotype);
+                        decrementGenotypeCnt(animal.getGenotype());
                     }
                 });
     }
 
     public void moveAnimals() {
-        for (Animal animal : this.animals) {
+        List<Animal> animalList = new LinkedList<>(this.animals);
+        for (Animal animal : animalList) {
             animal.move(this.moveEnergy);
         }
     }
@@ -238,6 +256,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
                     if (isOccupiedByGrass(position)) {
                         List<Animal> strongestAnimals;
                         strongestAnimals = animalList.firstWithTies();
+
                         if (strongestAnimals.size() > 0) {
                             int energyForEach = this.plantEnergy / strongestAnimals.size();
                             for (Animal animal : strongestAnimals) {
@@ -258,6 +277,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
                     Animal secondParent;
                     Animal child;
                     firstTwoAnimals = animalList.firstTwo();
+
                     if (firstTwoAnimals.size() == 2) {
                         firstParent = firstTwoAnimals.get(0);
                         secondParent = firstTwoAnimals.get(1);
@@ -266,7 +286,7 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
                             animalList.add(child);
                             child.addObserver(this);
                             animals.add(child);
-                            incrementGenotypeCnt(child.genotype);
+                            incrementGenotypeCnt(child.getGenotype());
                         }
                     }
         });
@@ -297,12 +317,39 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
         animalList.add(animal);
     }
 
+    public void magicAddAnimals() {
+        if (this.magicEvolutionCnt.get() >= 3) {
+            return;
+        }
+        Animal newAnimal;
+        Genotype newGenotype;
+        Vector2d position;
+        int energy;
+        List<Animal> oldAnimalList;
+        if (this.animals.size() <= 5) {
+            oldAnimalList = new LinkedList<>(this.animals);
+            for (Animal animal : oldAnimalList) {
+                position = getRandomPosition();
+                if (position != null) {
+                    newGenotype = new Genotype(animal.getGenotype());
+                    energy = animal.getStartEnergy();
+                    newAnimal = new Animal(position, energy, energy, newGenotype, this);
+                    addNewAnimal(newAnimal);
+                }
+            }
+            this.magicEvolutionCnt.incrementAndGet();
+        }
+    }
+
     public void nextDayCycle() {
         removeDeadAnimals();
         moveAnimals();
         feedAnimals();
         reproduceAnimals();
         addGrass();
+        if (this.magicEvolution) {
+            magicAddAnimals();
+        }
     }
 
     public void drawMap() {
@@ -320,7 +367,8 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     public float getAvgEnergy() {
         int energySum = 0;
         int cnt = 0;
-        for (Animal animal : this.animals) {
+        List<Animal> animalList = new LinkedList<>(this.animals);
+        for (Animal animal : animalList) {
             energySum += animal.getEnergy();
             cnt++;
         }
@@ -334,7 +382,8 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     public float getAvgChildrenCnt() {
         int childrenSum = 0;
         int cnt = 0;
-        for (Animal animal : this.animals) {
+        List<Animal> animalList = new LinkedList<>(this.animals);
+        for (Animal animal : animalList) {
             childrenSum += animal.getChildrenCnt();
             cnt++;
         }

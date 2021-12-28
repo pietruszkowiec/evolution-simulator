@@ -5,7 +5,7 @@ import javafx.application.Platform;
 
 public class ThreadedSimulationEngine extends SimulationEngine implements Runnable {
     private final int moveDelay;
-    public boolean isPaused;
+    private boolean paused;
     private int day = 0;
     private StatisticsPanel statisticsPanel;
 
@@ -28,24 +28,28 @@ public class ThreadedSimulationEngine extends SimulationEngine implements Runnab
         return day;
     }
 
+    public boolean isPaused() {
+        return paused;
+    }
+
     public void pause() {
         synchronized (this) {
-            this.isPaused = true;
+            this.paused = true;
         }
     }
 
     public void resume() {
         synchronized (this) {
-            this.isPaused = false;
+            this.paused = false;
             this.notifyAll();
         }
     }
 
     @Override
     public void run() {
-        while (true) {
+        while (this.map.getAnimalsSize() > 0) {
             try {
-                if (this.isPaused) {
+                if (this.paused) {
                     synchronized (this) {
                         this.wait();
                     }
@@ -53,19 +57,15 @@ public class ThreadedSimulationEngine extends SimulationEngine implements Runnab
 
                 this.map.nextDayCycle();
 
-//                System.out.println(Thread.currentThread().getName()
-//                        + " : Day " + day
-//                        + "\n\t animals = " + this.map.getAnimalCnt()
-//                        + "\n\t grass = " + this.map.getGrassCnt()
-//                        + "\n\t avg energy = " + this.map.getAvgEnergy()
-//                        + "\n\t avg life length = " + this.map.getAvgLifeLength()
-//                        + "\n\t avg num of children = " + this.map.getAvgChildrenCnt()
-//                        + "\n\t dominant genotype = " + this.map.getDominantGenotype());
-
                 if (this.day % 20 == 0) {
                     Platform.runLater(() -> statisticsPanel.updateSeries());
                 }
-                Platform.runLater(() -> this.map.drawMap());
+
+                if (this.map.isMagicEvolution()) {
+                    Platform.runLater(() -> statisticsPanel.updateMagicEvolutionCnt());
+                }
+
+                Platform.runLater(this.map::drawMap);
 
                 this.day++;
 

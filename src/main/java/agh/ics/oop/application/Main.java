@@ -7,7 +7,7 @@ public class Main {
     public static void main(String[] args) {
         try {
             Application.launch(App.class, args);
-        } catch(IllegalArgumentException ex) {
+        } catch(Exception ex) {
             System.out.println("Something went wrong: " + ex);
         } finally {
             System.out.println("Exiting program");

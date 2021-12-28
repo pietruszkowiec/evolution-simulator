@@ -71,7 +71,7 @@ public class Genotype {
             if (i < 10) {
                 builder.append(" ");
             }
-            builder.append(i);
+            builder.append(" ").append(i);
             builder.append(" : ").append(gene).append(" \n");
             i++;
         }

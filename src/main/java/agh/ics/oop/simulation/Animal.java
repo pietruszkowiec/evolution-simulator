@@ -5,9 +5,9 @@ import java.util.*;
 public class Animal {
     private Vector2d position;
     private int energy;
-    public final int startEnergy;
+    private final int startEnergy;
     private MapDirection direction = MapDirection.getRandomDirection();
-    public final Genotype genotype;
+    private final Genotype genotype;
     private final AbstractWorldMap map;
     private final List<IAnimalObserver> observers;
     private int age = 0;
@@ -44,12 +44,20 @@ public class Animal {
         return energy;
     }
 
+    public int getStartEnergy() {
+        return startEnergy;
+    }
+
     public int getAge() {
         return age;
     }
 
     public int getChildrenCnt() {
         return childrenCnt;
+    }
+
+    public Genotype getGenotype() {
+        return genotype;
     }
 
     public void move(int moveEnergy) {
@@ -76,7 +84,7 @@ public class Animal {
         this.energy += energyGained;
     }
 
-    public void decreaseEnergy(int energyLost) {
+    private void decreaseEnergy(int energyLost) {
         this.energy -= energyLost;
         if (this.energy < 0) {
             this.energy = 0;
@@ -85,7 +93,7 @@ public class Animal {
     }
 
     public boolean isDead() {
-        return this.energy == 0;
+        return this.energy <= 0;
     }
 
     public boolean canReproduce() {
@@ -126,24 +134,15 @@ public class Animal {
         this.observers.add(observer);
     }
 
-    public void positionChanged(Vector2d oldPosition) {
+    private void positionChanged(Vector2d oldPosition) {
         for (IAnimalObserver observer : this.observers) {
             observer.positionChanged(oldPosition, this);
         }
     }
 
-    public void energyChanged() {
+    private void energyChanged() {
         for (IAnimalObserver observer : this.observers) {
             observer.energyChanged(this);
         }
-    }
-
-    public String toString() {
-        String res = this.energy + "";
-        if (this.energy < 10) {
-            res += " ";
-        }
-        res += this.direction;
-        return res;
     }
 }

@@ -31,7 +31,7 @@ public class ButtonField {
         if (this.object instanceof Animal) {
             Animal animal = (Animal) this.object;
             double energy = animal.getEnergy();
-            double startEnergy = animal.startEnergy;
+            double startEnergy = animal.getStartEnergy();
             double fraction = Math.min(energy / startEnergy, 1);
             color = Color.color(fraction, 0, 0);
         } else if (this.object instanceof Grass) {
