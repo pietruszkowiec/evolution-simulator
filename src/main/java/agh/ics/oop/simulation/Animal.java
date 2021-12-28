@@ -7,20 +7,22 @@ public class Animal {
     private int energy;
     public final int startEnergy;
     private MapDirection direction = MapDirection.getRandomDirection();
-    public final List<Gene> genome;
-    public static final int genomeLength = 32;
+    public final Genotype genotype;
     private final AbstractWorldMap map;
     private final List<IAnimalObserver> observers;
+    private int age = 0;
+    private int childrenCnt = 0;
 
     public Animal(Vector2d initialPosition,
                   int startEnergy, int initialEnergy,
-                  List<Gene> genome, AbstractWorldMap map) {
+                  Genotype genotype, AbstractWorldMap map) {
         this.position = initialPosition;
         this.startEnergy = startEnergy;
         this.energy = initialEnergy;
-        this.genome = genome;
+        this.genotype = genotype;
         this.map = map;
         this.observers = new LinkedList<>();
+        this.age = 0;
     }
 
     public Animal(Vector2d initialPosition,
@@ -29,7 +31,7 @@ public class Animal {
         this.position = initialPosition;
         this.startEnergy = startEnergy;
         this.energy = initialEnergy;
-        this.genome = Gene.generateRandomGenome();
+        this.genotype = Genotype.generateRandomGenotype();
         this.map = map;
         this.observers = new LinkedList<>();
     }
@@ -42,8 +44,16 @@ public class Animal {
         return energy;
     }
 
+    public int getAge() {
+        return age;
+    }
+
+    public int getChildrenCnt() {
+        return childrenCnt;
+    }
+
     public void move(int moveEnergy) {
-        Gene gene = Gene.getRandomGeneFromGenome(genome);
+        Gene gene = this.genotype.getRandomGene();
         MapBehaviour behaviour = gene.geneToMapBehaviour();
         Vector2d oldPosition = this.position;
 
@@ -59,6 +69,7 @@ public class Animal {
 
         positionChanged(oldPosition);
         decreaseEnergy(moveEnergy);
+        this.age++;
     }
 
     public void increaseEnergy(int energyGained) {
@@ -90,29 +101,25 @@ public class Animal {
         Random random = new Random();
         int leftOrRight = random.nextInt(2);
 
-        int thisParentGenomeShare = (Animal.genomeLength * this.energy)
+        int thisParentGenotypeShare = (Genotype.genotypeLength * this.energy)
                 / (this.energy + other.energy);
-        int otherParentGenomeShare = Animal.genomeLength - thisParentGenomeShare;
+        int otherParentGenotypeShare = Genotype.genotypeLength - thisParentGenotypeShare;
 
-        List<Gene> leftPartGenome;
-        List<Gene> rightPartGenome;
+        Genotype childGenotype;
         if (leftOrRight == 0) {
-            leftPartGenome = this.genome.subList(0, thisParentGenomeShare);
-            rightPartGenome = other.genome.subList(thisParentGenomeShare, Animal.genomeLength);
+            childGenotype = new Genotype(this.genotype, other.genotype, thisParentGenotypeShare);
         }  else {
-            leftPartGenome = other.genome.subList(0, otherParentGenomeShare);
-            rightPartGenome = this.genome.subList(otherParentGenomeShare, Animal.genomeLength);
+            childGenotype = new Genotype(other.genotype, this.genotype, otherParentGenotypeShare);
         }
-
-        List<Gene> childGenome = new ArrayList<>(leftPartGenome);
-        childGenome.addAll(rightPartGenome);
-        Collections.sort(childGenome);
 
         this.decreaseEnergy(thisParentEnergyLoss);
         other.decreaseEnergy(otherParentEnergyLoss);
 
+        this.childrenCnt++;
+        other.childrenCnt++;
+
         return new Animal(this.position, this.startEnergy,
-                childEnergy, childGenome, this.map);
+                childEnergy, childGenotype, this.map);
     }
 
     public void addObserver(IAnimalObserver observer) {

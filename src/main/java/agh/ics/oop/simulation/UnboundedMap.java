@@ -13,4 +13,9 @@ public class UnboundedMap extends AbstractWorldMap {
         int newY = (y + this.height) % this.height;
         return new Vector2d(newX, newY);
     }
+
+    @Override
+    public String toString() {
+        return "Unbounded";
+    }
 }

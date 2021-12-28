@@ -2,12 +2,12 @@ package agh.ics.oop.application.gui;
 
 import agh.ics.oop.simulation.*;
 import javafx.application.Application;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 public class App extends Application {
@@ -26,11 +26,14 @@ public class App extends Application {
     private ThreadedSimulationEngine rightEngine;
     private Thread leftThread;
     private Thread rightThread;
-    private int mapWidth = 500;
-    private int mapHeight = 500;
+    private final int sceneWidth = 300;
+    private final int sceneHeight = 300;
+    private StatisticsPanel leftStatistics;
+    private StatisticsPanel rightStatistics;
+    private boolean moveStatistics = true;
 
     public void initializeMapsAndEngines() {
-        int cellSize = Math.min(mapWidth / width, mapHeight / height);
+        int cellSize = Math.min(sceneWidth / width, sceneHeight / height);
 
         this.leftMap = new UnboundedMap(width, height, jungleRatio, cellSize, moveEnergy, plantEnergy);
         this.rightMap = new BoundedMap(width, height, jungleRatio, cellSize, moveEnergy, plantEnergy);
@@ -40,72 +43,86 @@ public class App extends Application {
         this.rightEngine = new ThreadedSimulationEngine(this.rightMap,
                 initialNumOfAnimals, initialNumOfGrass,
                 startEnergy, this.moveDelay);
+
+        this.leftStatistics = new StatisticsPanel(this.leftEngine, this.leftMap, moveStatistics);
+        this.rightStatistics = new StatisticsPanel(this.rightEngine, this.rightMap, moveStatistics);
+
+        this.leftEngine.setStatisticsPanel(this.leftStatistics);
+        this.rightEngine.setStatisticsPanel(this.rightStatistics);
     }
 
     public Stage optionsMenu(Stage primaryStage) {
         GridPane optionsGrid = new GridPane();
 
-        optionsGrid.getColumnConstraints().add(new ColumnConstraints(10));
-        optionsGrid.getColumnConstraints().add(new ColumnConstraints(200));
-        optionsGrid.getRowConstraints().add(new RowConstraints(10));
+        optionsGrid.getColumnConstraints().add(new ColumnConstraints(20));
+        optionsGrid.getColumnConstraints().add(new ColumnConstraints(180));
+        optionsGrid.getColumnConstraints().add(new ColumnConstraints(180));
+        optionsGrid.getColumnConstraints().add(new ColumnConstraints(20));
+        for (int i = 0; i < 11; i++) {
+            optionsGrid.getRowConstraints().add(new RowConstraints(25));
+        }
+        optionsGrid.getRowConstraints().add(new RowConstraints(15));
+        optionsGrid.getRowConstraints().add(new RowConstraints(30));
+        optionsGrid.getRowConstraints().add(new RowConstraints(15));
 
         Label widthLabel = new Label("Map width ");
         optionsGrid.add(widthLabel, 1, 1);
-
         TextField widthTextBox = new TextField(this.width + "");
         optionsGrid.add(widthTextBox, 2, 1);
 
         Label heightLabel = new Label("Map height ");
         optionsGrid.add(heightLabel, 1, 2);
-
         TextField heightTextBox = new TextField(this.height + "");
         optionsGrid.add(heightTextBox, 2, 2);
 
         Label jungleRatioLabel = new Label("Jungle / Map ratio (0, 1): ");
         optionsGrid.add(jungleRatioLabel, 1, 3);
-
         TextField jungleRatioTextBox = new TextField(this.jungleRatio + "");
         optionsGrid.add(jungleRatioTextBox, 2, 3);
 
-        Label initialNumOfAnimalsLabel = new Label("Initial number of animals on map: ");
+        Label initialNumOfAnimalsLabel = new Label("Initial number of animals: ");
         optionsGrid.add(initialNumOfAnimalsLabel, 1, 4);
-
         TextField initialNumOfAnimalsTextBox = new TextField(this.initialNumOfAnimals + "");
         optionsGrid.add(initialNumOfAnimalsTextBox, 2, 4);
 
-        Label initialNumOfGrassLabel = new Label("Initial number of grass on map: ");
+        Label initialNumOfGrassLabel = new Label("Initial number of grass: ");
         optionsGrid.add(initialNumOfGrassLabel, 1, 5);
-
         TextField initialNumOfGrassTextBox = new TextField(this.initialNumOfGrass + "");
         optionsGrid.add(initialNumOfGrassTextBox, 2, 5);
 
         Label startEnergyLabel = new Label("Start energy level: ");
         optionsGrid.add(startEnergyLabel, 1, 6);
-
         TextField startEnergyTextBox = new TextField(this.startEnergy + "");
         optionsGrid.add(startEnergyTextBox, 2, 6);
 
         Label moveEnergyLabel = new Label("Move energy cost: ");
         optionsGrid.add(moveEnergyLabel, 1, 7);
-
         TextField moveEnergyTextBox = new TextField(this.moveEnergy + "");
         optionsGrid.add(moveEnergyTextBox, 2, 7);
 
         Label plantEnergyLabel = new Label("Plant energy gain: ");
         optionsGrid.add(plantEnergyLabel, 1, 8);
-
         TextField plantEnergyTextBox = new TextField(this.plantEnergy + "");
         optionsGrid.add(plantEnergyTextBox, 2, 8);
 
-        Button startButton = new Button("Start");
-        optionsGrid.add(startButton, 2, 9);
+        Label moveDelayLabel = new Label("Move delay (ms): ");
+        optionsGrid.add(moveDelayLabel, 1, 9);
+        TextField moveDelayTextBox = new TextField(this.moveDelay + "");
+        optionsGrid.add(moveDelayTextBox, 2, 9);
 
-        Scene optionsScene = new Scene(optionsGrid, 450, 300);
+        Label moveStatisticsLabel = new Label("Move statistic charts? ");
+        optionsGrid.add(moveStatisticsLabel, 1, 10);
+        CheckBox moveStatisticsCheckBox = new CheckBox();
+        optionsGrid.add(moveStatisticsCheckBox, 2, 10);
+
+        Button startButton = new Button("Start");
+        optionsGrid.add(startButton, 2, 12);
+
+        Scene optionsScene = new Scene(optionsGrid);
         Stage optionsStage = new Stage();
         optionsStage.setScene(optionsScene);
 
         startButton.setOnAction(event -> {
-            optionsStage.close();
 
             this.height = Integer.parseInt(heightTextBox.getText());
             this.width = Integer.parseInt(widthTextBox.getText());
@@ -115,10 +132,16 @@ public class App extends Application {
             this.startEnergy = Integer.parseInt(startEnergyTextBox.getText());
             this.moveEnergy = Integer.parseInt(moveEnergyTextBox.getText());
             this.plantEnergy = Integer.parseInt(plantEnergyTextBox.getText());
+            this.moveDelay = Integer.parseInt(moveDelayTextBox.getText());
+            this.moveStatistics = moveStatisticsCheckBox.isSelected();
 
             initializeMapsAndEngines();
 
+            optionsStage.close();
             primaryStage.show();
+
+            this.leftMap.drawMap();
+            this.rightMap.drawMap();
 
             this.leftThread = new Thread(this.leftEngine);
             this.rightThread = new Thread(this.rightEngine);
@@ -150,10 +173,20 @@ public class App extends Application {
 
         Button pauseResumeButton = makePauseResumeButton(engine);
 
-        pane.setCenter(map.getMapGrid().getGrid());
-        pane.setBottom(pauseResumeButton);
-        pane.setAlignment(pauseResumeButton, Pos.CENTER);
+        Label mapTitle = new Label(map.toString() + " map\n");
+        mapTitle.setFont(new Font(16));
+        GridPane grid = map.getMapGrid().getGrid();
+        VBox mainVBox = new VBox(mapTitle, new Label("\n"),
+                grid, new Label("\n"), pauseResumeButton);
 
+        pauseResumeButton.setAlignment(Pos.CENTER);
+        grid.setAlignment(Pos.CENTER);
+        mainVBox.setAlignment(Pos.CENTER);
+
+        BorderPane.setAlignment(pauseResumeButton, Pos.CENTER);
+        pane.setCenter(mainVBox);
+
+        pane.setBottom(engine.getStatisticsPanel().makeAllCharts());
         return pane;
     }
 
@@ -163,11 +196,33 @@ public class App extends Application {
 
         optionsStage.showAndWait();
 
-        BorderPane leftPane = makePane(this.leftEngine, this.leftMap);
-        BorderPane rightPane = makePane(this.rightEngine, this.rightMap);
+        Separator vSeparatorLeft = new Separator();
+        vSeparatorLeft.setOrientation(Orientation.VERTICAL);
+        Separator vSeparatorRight = new Separator();
+        vSeparatorRight.setOrientation(Orientation.VERTICAL);
 
-        HBox mainHBox = new HBox(leftPane, rightPane);
-        Scene scene = new Scene(mainHBox);
+        BorderPane leftPane = new BorderPane();
+        leftPane.setCenter(makePane(this.leftEngine, this.leftMap));
+        leftPane.setRight(this.leftStatistics.makeDominantGenotypeVBox());
+        leftPane.setLeft(vSeparatorLeft);
+
+        BorderPane rightPane = new BorderPane();
+        rightPane.setCenter(makePane(this.rightEngine, this.rightMap));
+        rightPane.setLeft(this.rightStatistics.makeDominantGenotypeVBox());
+        rightPane.setRight(vSeparatorRight);
+
+        Separator vSeparatorMid = new Separator();
+        vSeparatorMid.setOrientation(Orientation.VERTICAL);
+        HBox mainHBox = new HBox(leftPane, vSeparatorMid, rightPane);
+
+        Separator hSeparatorUp = new Separator();
+        Separator hSeparatorDown = new Separator();
+        hSeparatorUp.setOrientation(Orientation.HORIZONTAL);
+        hSeparatorDown.setOrientation(Orientation.HORIZONTAL);
+
+        VBox mainVBox = new VBox(new Label(), hSeparatorUp,
+                mainHBox, hSeparatorDown);
+        Scene scene = new Scene(mainVBox);
         primaryStage.setScene(scene);
     }
 }

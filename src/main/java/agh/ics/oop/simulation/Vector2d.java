@@ -62,7 +62,7 @@ public class Vector2d {
         if (this == other) {
             return true;
         }
-        if(!(other instanceof Vector2d)) {
+        if (!(other instanceof Vector2d)) {
             return false;
         }
         Vector2d that = (Vector2d) other;

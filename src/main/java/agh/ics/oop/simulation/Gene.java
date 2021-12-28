@@ -1,7 +1,5 @@
 package agh.ics.oop.simulation;
 
-import java.util.*;
-
 public enum Gene {
     G_0,
     G_1,
@@ -12,25 +10,6 @@ public enum Gene {
     G_6,
     G_7;
 
-    public static List<Gene> generateRandomGenome() {
-        Random random = new Random();
-        List<Gene> genomeList = new ArrayList<>();
-
-        Gene chosenGene;
-        for (int i = 0; i < Animal.genomeLength; i++) {
-            chosenGene = values()[random.nextInt(values().length)];
-            genomeList.add(chosenGene);
-        }
-
-        Collections.sort(genomeList);
-        return genomeList;
-    }
-
-    public static Gene getRandomGeneFromGenome(List<Gene> genome) {
-        Random random = new Random();
-        int randomIndex = random.nextInt(Animal.genomeLength);
-        return genome.get(randomIndex);
-    }
 
     public MapBehaviour geneToMapBehaviour() {
         return switch (this) {

@@ -18,7 +18,7 @@ public class MapGrid {
         this.map = map;
         this.cellSize = cellSize;
         this.grid = new GridPane();
-        this.grid.setGridLinesVisible(true);
+//        this.grid.setGridLinesVisible(true);
         Vector2d lowerLeft = map.getLowerLeft();
         Vector2d upperRight = map.getUpperRight();
         this.width = upperRight.x - lowerLeft.x + 1;
@@ -72,7 +72,7 @@ public class MapGrid {
                 y = j;
                 Vector2d position = new Vector2d(x, y);
 
-                buttonField = new ButtonField(position, this.map.isInJungle(position));
+                buttonField = new ButtonField(this.map.isInJungle(position));
                 buttonField.getVBox().setPrefSize(cellSize, cellSize);
                 this.buttonFields[x][y] = buttonField;
                 this.grid.add(buttonField.getVBox(), j, i);

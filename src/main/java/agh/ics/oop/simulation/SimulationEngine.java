@@ -1,7 +1,7 @@
 package agh.ics.oop.simulation;
 
 public class SimulationEngine {
-    protected final AbstractWorldMap map;
+    public final AbstractWorldMap map;
     protected final int initialNumOfAnimals;
     protected final int initialNumOfGrass;
     protected final int startEnergy;
@@ -32,8 +32,7 @@ public class SimulationEngine {
             }
             animal = new Animal(position, this.startEnergy,
                     this.startEnergy, this.map);
-            this.map.placeAnimal(animal);
-            animal.addObserver(this.map);
+            this.map.addNewAnimal(animal);
         }
     }
 
@@ -44,8 +43,6 @@ public class SimulationEngine {
         for (int i = 0; i < this.initialNumOfGrass; i++) {
             position = this.map.getRandomPosition();
             if (position == null) {
-//                too small map, animals cannot fit!
-//                TODO throwing exception
                 break;
             }
             grass = new Grass(position);

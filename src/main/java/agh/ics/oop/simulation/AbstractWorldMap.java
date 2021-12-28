@@ -4,6 +4,7 @@ import agh.ics.oop.application.gui.MapGrid;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final int width, height;
@@ -20,6 +21,10 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     protected final int plantEnergy;
     protected ConcurrentHashMap<Vector2d, AnimalList> animalLists;
     protected HashMap<Vector2d, Grass> grassMap;
+    protected List<Animal> animals;
+    protected HashMap<Genotype, AtomicInteger> genotypeMap;
+    protected float avgLifeLength = 0;
+    protected int deathCnt = 0;
 
     public AbstractWorldMap(int width, int height, float jungleRatio, int cellSize,
                             int moveEnergy, int plantEnergy) {
@@ -45,6 +50,8 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
         this.animalLists = new ConcurrentHashMap<>(0);
         this.grassMap = new LinkedHashMap<>(0);
+        this.animals = new LinkedList<>();
+        this.genotypeMap = new LinkedHashMap<>(0);
     }
 
     public Vector2d getLowerLeft() {
@@ -57,6 +64,31 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
     public MapGrid getMapGrid() {
         return mapGrid;
+    }
+
+    public void incrementGenotypeCnt(Genotype genotype) {
+        if (this.genotypeMap.containsKey(genotype)) {
+            this.genotypeMap.get(genotype).incrementAndGet();
+        } else {
+            this.genotypeMap.put(genotype, new AtomicInteger(1));
+        }
+    }
+
+    public void decrementGenotypeCnt(Genotype genotype) {
+        int cnt;
+        if (this.genotypeMap.containsKey(genotype)) {
+            cnt = this.genotypeMap.get(genotype).decrementAndGet();
+            if (cnt == 0) {
+                genotypeMap.remove(genotype);
+            }
+        }
+    }
+
+    public void addNewAnimal(Animal animal) {
+        this.animals.add(animal);
+        incrementGenotypeCnt(animal.genotype);
+        animal.addObserver(this);
+        placeAnimal(animal);
     }
 
     public void placeAnimal(Animal animal) {
@@ -181,31 +213,30 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     }
 
     public void removeDeadAnimals() {
-        this.animalLists.forEach(
-                (position, animalList) -> {
+        this.animalLists.values().forEach(animalList -> {
+                    Animal animal;
                     while (!(animalList.isEmpty()) && animalList.last().isDead()) {
-                        animalList.remove(animalList.last());
+                        animal = animalList.last();
+                        animalList.remove(animal);
+                        avgLifeLength = avgLifeLength * ((float) deathCnt) / (deathCnt + 1)
+                                + ((float) animal.getAge()) / (deathCnt + 1);
+                        deathCnt++;
+                        animals.remove(animal);
+                        decrementGenotypeCnt(animal.genotype);
                     }
                 });
     }
 
     public void moveAnimals() {
-        this.animalLists.forEach(
-                (position, animalList) -> {
-                    if (!(animalList.isEmpty())) {
-                        for (Animal animal : animalList.getAnimals()) {
-                            animal.move(this.moveEnergy);
-                        }
-                    }
-                });
+        for (Animal animal : this.animals) {
+            animal.move(this.moveEnergy);
+        }
     }
 
     public void feedAnimals() {
-        this.animalLists.forEach(
-                (position, animalList) -> {
+        this.animalLists.forEach((position, animalList) -> {
                     if (isOccupiedByGrass(position)) {
                         List<Animal> strongestAnimals;
-                        animalList = this.animalLists.get(position);
                         strongestAnimals = animalList.firstWithTies();
                         if (strongestAnimals.size() > 0) {
                             int energyForEach = this.plantEnergy / strongestAnimals.size();
@@ -221,10 +252,8 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
     }
 
     public void reproduceAnimals() {
-        this.animalLists.forEach(
-                (position, animalList) -> {
+        this.animalLists.values().forEach(animalList -> {
                     List<Animal> firstTwoAnimals;
-                    List<Animal> children = new LinkedList<>();
                     Animal firstParent;
                     Animal secondParent;
                     Animal child;
@@ -234,9 +263,10 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
                         secondParent = firstTwoAnimals.get(1);
                         if (firstParent.canReproduce() && secondParent.canReproduce()) {
                             child = firstParent.reproduce(secondParent);
-                            children.add(child);
                             animalList.add(child);
                             child.addObserver(this);
+                            animals.add(child);
+                            incrementGenotypeCnt(child.genotype);
                         }
                     }
         });
@@ -277,5 +307,55 @@ public abstract class AbstractWorldMap implements IWorldMap, IAnimalObserver {
 
     public void drawMap() {
         this.mapGrid.drawGrid();
+    }
+
+    public int getAnimalCnt() {
+        return this.animals.size();
+    }
+
+    public int getGrassCnt() {
+        return this.grassMap.size();
+    }
+
+    public float getAvgEnergy() {
+        int energySum = 0;
+        int cnt = 0;
+        for (Animal animal : this.animals) {
+            energySum += animal.getEnergy();
+            cnt++;
+        }
+        return ((float) energySum) / cnt;
+    }
+
+    public float getAvgLifeLength() {
+        return avgLifeLength;
+    }
+
+    public float getAvgChildrenCnt() {
+        int childrenSum = 0;
+        int cnt = 0;
+        for (Animal animal : this.animals) {
+            childrenSum += animal.getChildrenCnt();
+            cnt++;
+        }
+        return ((float) childrenSum) / cnt;
+    }
+
+    public Genotype getDominantGenotype() {
+        Genotype dominant = null;
+        int maxCnt = 0;
+        int cnt;
+        Genotype genotype;
+
+        for (Map.Entry<Genotype, AtomicInteger> entry : this.genotypeMap.entrySet()) {
+            genotype = entry.getKey();
+            cnt = entry.getValue().get();
+            if (cnt > maxCnt) {
+                maxCnt = cnt;
+                dominant = genotype;
+            }
+        }
+
+        return dominant;
     }
 }

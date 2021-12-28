@@ -13,4 +13,9 @@ public class BoundedMap extends AbstractWorldMap {
         }
         return position;
     }
+
+    @Override
+    public String toString() {
+        return "Bounded";
+    }
 }

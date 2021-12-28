@@ -5,23 +5,19 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class AnimalList {
     private final CopyOnWriteArrayList<Animal> animals;
-    private static EnergyComparator energyComparator = new EnergyComparator();
+    private static final EnergyComparator energyComparator = new EnergyComparator();
 
     public AnimalList() {
         this.animals = new CopyOnWriteArrayList<>();
     }
 
-    public synchronized CopyOnWriteArrayList<Animal> getAnimals() {
-        return animals;
-    }
-
     public synchronized void add(Animal animal) {
         this.animals.add(animal);
-        Collections.sort(this.animals, AnimalList.energyComparator);
+        this.animals.sort(AnimalList.energyComparator);
     }
 
-    public synchronized boolean remove(Animal animal) {
-        return this.animals.remove(animal);
+    public synchronized void remove(Animal animal) {
+        this.animals.remove(animal);
     }
 
     public synchronized Animal first() {
